@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Snake — Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#07070f;--border:#1e1e3a;--green:#06d6a0;--magenta:#f72585;--yellow:#f9c74f;--cyan:#00f5d4;--text:#e8e8ff;--muted:#6060a0}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(6,214,160,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(6,214,160,.025) 1px,transparent 1px);background-size:32px 32px;pointer-events:none}
+    body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px);pointer-events:none}
+    .page{position:relative;z-index:1;width:100%;max-width:700px;padding:32px 20px 60px;display:flex;flex-direction:column;align-items:center;gap:22px}
+    .nav{width:100%;display:flex;align-items:center;justify-content:space-between}
+    .back-btn{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-decoration:none;letter-spacing:1px;transition:color .2s}
+    .back-btn:hover{color:var(--green)}
+    .back-btn::before{content:'◄ '}
+    .game-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--green);opacity:.6}
+    h1{font-family:'Press Start 2P',monospace;font-size:clamp(14px,3.5vw,24px);letter-spacing:3px;color:var(--green);text-shadow:0 0 20px rgba(6,214,160,.5);text-align:center}
+
+    /* LEVEL SELECTOR */
+    .level-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+    .lv-btn{font-family:'Press Start 2P',monospace;font-size:7px;padding:8px 10px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;letter-spacing:1px;transition:all .15s;min-width:40px}
+    .lv-btn:hover{border-color:var(--green);color:var(--green)}
+    .lv-btn.active{border-color:var(--green);color:var(--bg);background:var(--green);box-shadow:0 0 10px var(--green)}
+    .lv-btn.locked{opacity:.3;cursor:not-allowed}
+    .lv-btn.cleared{border-color:var(--yellow);color:var(--yellow)}
+    .lv-btn.cleared.active{background:var(--yellow);color:var(--bg);box-shadow:0 0 10px var(--yellow)}
+
+    /* STATS */
+    .stats{display:flex;gap:28px;flex-wrap:wrap;justify-content:center}
+    .stat{text-align:center}
+    .stat-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:2px;margin-bottom:4px}
+    .stat-value{font-family:'Press Start 2P',monospace;font-size:14px;color:var(--green)}
+    .stat-value.yellow{color:var(--yellow)}
+
+    /* CANVAS */
+    .canvas-wrap{position:relative;border:2px solid var(--border);box-shadow:0 0 30px rgba(6,214,160,.1);background:#02020a}
+    #game-canvas{display:block}
+    .canvas-wrap.dead{box-shadow:0 0 30px rgba(247,37,133,.3);border-color:var(--magenta)}
+    .canvas-wrap.win{box-shadow:0 0 40px rgba(6,214,160,.6);border-color:var(--green)}
+
+    /* OVERLAY */
+    .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(2,2,10,.88);transition:opacity .2s}
+    .overlay.hidden{display:none}
+    .ov-title{font-family:'Press Start 2P',monospace;font-size:clamp(12px,3vw,20px);letter-spacing:2px;text-align:center;line-height:1.8}
+    .ov-sub{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-align:center;line-height:2}
+    .ov-btn{font-family:'Press Start 2P',monospace;font-size:9px;padding:12px 24px;border:none;cursor:pointer;letter-spacing:1px;transition:all .2s}
+    .ov-btn.primary{background:var(--green);color:#000;box-shadow:0 0 16px var(--green)}
+    .ov-btn.primary:hover{box-shadow:0 0 30px var(--green)}
+    .ov-btn.secondary{background:transparent;color:var(--muted);border:1px solid var(--border)}
+    .ov-btn.secondary:hover{color:var(--text);border-color:var(--text)}
+    .ov-btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+
+    /* LEVEL INFO */
+    .level-info{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-align:center;letter-spacing:1px;line-height:2.2;border:1px solid var(--border);padding:12px 20px;max-width:440px}
+    .level-info span{color:var(--green)}
+
+    /* D-PAD for mobile */
+    .dpad{display:none;grid-template-columns:repeat(3,50px);grid-template-rows:repeat(2,50px);gap:6px;margin-top:8px}
+    @media(max-width:600px){.dpad{display:grid}}
+    .dp-btn{font-size:20px;background:var(--border);border:none;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:4px;transition:background .1s;user-select:none;-webkit-user-select:none}
+    .dp-btn:active{background:#2a2a5a}
+    .dp-up{grid-column:2;grid-row:1}
+    .dp-left{grid-column:1;grid-row:2}
+    .dp-down{grid-column:2;grid-row:2}
+    .dp-right{grid-column:3;grid-row:2}
+  </style>
+</head>
+<body>
+<div class="page">
+  <nav class="nav">
+    <a class="back-btn" href="arcade.html">ARCADE</a>
+    <span class="game-label">GAME 03</span>
+  </nav>
+  <h1>SNAKE CLASSIC</h1>
+
+  <div class="level-row" id="level-row"></div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">SCORE</div><div class="stat-value" id="score">0</div></div>
+    <div class="stat"><div class="stat-label">LEVEL</div><div class="stat-value yellow" id="lv-display">1</div></div>
+    <div class="stat"><div class="stat-label">FOOD LEFT</div><div class="stat-value" id="food-left">—</div></div>
+    <div class="stat"><div class="stat-label">HIGH SCORE</div><div class="stat-value yellow" id="hi-score">0</div></div>
+  </div>
+
+  <div class="canvas-wrap" id="canvas-wrap">
+    <canvas id="game-canvas"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="ov-title" id="ov-title" style="color:var(--green)">SNAKE</div>
+      <div class="ov-sub" id="ov-sub">SELECT A LEVEL &amp; PRESS START<br>USE ARROWS OR WASD TO MOVE</div>
+      <div class="ov-btns">
+        <button class="ov-btn primary" id="ov-start">▶ START</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dpad">
+    <button class="dp-btn dp-up" data-dir="UP">▲</button>
+    <button class="dp-btn dp-left" data-dir="LEFT">◄</button>
+    <button class="dp-btn dp-down" data-dir="DOWN">▼</button>
+    <button class="dp-btn dp-right" data-dir="RIGHT">►</button>
+  </div>
+
+  <div class="level-info" id="level-info"></div>
+</div>
+
+<script>
+  // LB safety shim - no-op if leaderboard.js failed to load
+  if(typeof LB === 'undefined') window.LB = { submit:(_g,_s,_l,cb)=>{ if(cb) cb(); }, show:()=>{}, puzzleScore:()=>0, memoryScore:()=>0, reactionScore:()=>0 };
+// ── LEVEL DEFINITIONS ─────────────────────────────────────────────────────
+const LEVELS = [
+  { n:1,  speed:180, wrap:true,  foodNeeded:5,  obstacles:false, gridW:20, gridH:20, desc:'5 food · walls wrap · slow'        },
+  { n:2,  speed:160, wrap:true,  foodNeeded:7,  obstacles:false, gridW:22, gridH:22, desc:'7 food · walls wrap · medium'       },
+  { n:3,  speed:145, wrap:false, foodNeeded:8,  obstacles:false, gridW:22, gridH:22, desc:'8 food · walls kill · medium'       },
+  { n:4,  speed:130, wrap:false, foodNeeded:10, obstacles:false, gridW:24, gridH:24, desc:'10 food · walls kill · faster'      },
+  { n:5,  speed:115, wrap:false, foodNeeded:10, obstacles:true,  gridW:24, gridH:24, desc:'10 food · 4 obstacles · fast'       },
+  { n:6,  speed:100, wrap:false, foodNeeded:12, obstacles:true,  gridW:26, gridH:26, desc:'12 food · 6 obstacles · fast'       },
+  { n:7,  speed:88,  wrap:false, foodNeeded:12, obstacles:true,  gridW:26, gridH:26, desc:'12 food · 8 obstacles · very fast'  },
+  { n:8,  speed:75,  wrap:false, foodNeeded:14, obstacles:true,  gridW:28, gridH:28, desc:'14 food · 10 obstacles · very fast' },
+  { n:9,  speed:62,  wrap:false, foodNeeded:15, obstacles:true,  gridW:28, gridH:28, desc:'15 food · maze walls · extreme'     },
+  { n:10, speed:50,  wrap:false, foodNeeded:18, obstacles:true,  gridW:30, gridH:30, desc:'18 food · dense maze · insane'      },
+];
+
+// ── OBSTACLE PATTERNS ─────────────────────────────────────────────────────
+function getObstacles(level, gW, gH) {
+  const count = [0,0,0,0,4,6,8,10,14,18][level.n - 1];
+  if (!count) return [];
+  const obs = [];
+  const cx = Math.floor(gW/2), cy = Math.floor(gH/2);
+  // Symmetric cross pattern scaled to level
+  const patterns = [
+    // L5: corner pillars
+    [[4,4],[4,gH-5],[gW-5,4],[gW-5,gH-5]],
+    // L6: corner + mid
+    [[4,4],[4,gH-5],[gW-5,4],[gW-5,gH-5],[cx,4],[cx,gH-5]],
+    // L7: more border
+    [[4,4],[4,gH-5],[gW-5,4],[gW-5,gH-5],[cx,4],[cx,gH-5],[4,cy],[gW-5,cy]],
+    // L8: inner walls
+    [[4,4],[4,gH-5],[gW-5,4],[gW-5,gH-5],[cx,4],[cx,gH-5],[4,cy],[gW-5,cy],[cx-4,cy],[cx+4,cy]],
+    // L9: maze arms
+    [[cx,6],[cx,7],[cx,8],[cx,gH-7],[cx,gH-8],[cx,gH-9],[6,cy],[7,cy],[8,cy],[gW-7,cy],[gW-8,cy],[gW-9,cy],[cx-6,cy-6],[cx+6,cy+6]],
+    // L10: dense maze
+    [[cx,4],[cx,5],[cx,6],[cx,gH-5],[cx,gH-6],[cx,gH-7],[4,cy],[5,cy],[6,cy],[gW-5,cy],[gW-6,cy],[gW-7,cy],[cx-6,4],[cx-6,5],[cx+6,gH-5],[cx+6,gH-6],[4,cy-6],[4,cy+6],[gW-5,cy-6],[gW-5,cy+6]],
+  ];
+  return (patterns[level.n - 5] || []).map(([x,y])=>({x,y}));
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let currentLevel = 0; // index into LEVELS
+let snake, dir, nextDir, food, obstacles, score, foodEaten, gameLoop, running;
+let cleared = JSON.parse(localStorage.getItem('snakeCleared') || '[]');
+let hiScore  = parseInt(localStorage.getItem('snakeHi') || '0');
+
+// ── DOM ───────────────────────────────────────────────────────────────────
+const canvas    = document.getElementById('game-canvas');
+const ctx       = canvas.getContext('2d');
+const wrap      = document.getElementById('canvas-wrap');
+const overlay   = document.getElementById('overlay');
+const ovTitle   = document.getElementById('ov-title');
+const ovSub     = document.getElementById('ov-sub');
+const scoreEl   = document.getElementById('score');
+const lvEl      = document.getElementById('lv-display');
+const foodLeftEl= document.getElementById('food-left');
+const hiEl      = document.getElementById('hi-score');
+const levelInfo = document.getElementById('level-info');
+hiEl.textContent = hiScore;
+
+// ── BUILD LEVEL BUTTONS ───────────────────────────────────────────────────
+const levelRow = document.getElementById('level-row');
+LEVELS.forEach((lv, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'lv-btn' + (cleared.includes(i) ? ' cleared' : '') + (i === 0 ? ' active' : '');
+  btn.textContent = lv.n;
+  btn.dataset.index = i;
+  btn.addEventListener('click', () => selectLevel(i));
+  levelRow.appendChild(btn);
+});
+
+function selectLevel(i) {
+  currentLevel = i;
+  document.querySelectorAll('.lv-btn').forEach((b, j) => b.classList.toggle('active', j === i));
+  const lv = LEVELS[i];
+  lvEl.textContent = lv.n;
+  levelInfo.innerHTML = `LEVEL <span>${lv.n}</span> &nbsp;·&nbsp; ${lv.desc.toUpperCase()}`;
+  showIdleOverlay();
+}
+
+function showIdleOverlay() {
+  const lv = LEVELS[currentLevel];
+  ovTitle.style.color = 'var(--green)';
+  ovTitle.textContent = `LEVEL ${lv.n}`;
+  ovSub.innerHTML = `${lv.desc.toUpperCase()}<br><br>ARROWS OR WASD TO MOVE`;
+  overlay.querySelector('.ov-btns').innerHTML = `<button class="ov-btn primary" id="ov-start">▶ START</button>`;
+  document.getElementById('ov-start').addEventListener('click', startGame);
+  overlay.classList.remove('hidden');
+  wrap.className = 'canvas-wrap';
+}
+
+selectLevel(0);
+
+// ── CANVAS SIZING ─────────────────────────────────────────────────────────
+function setupCanvas(lv) {
+  const maxW = Math.min(window.innerWidth - 44, 560);
+  const cellSize = Math.floor(maxW / lv.gridW);
+  canvas.width  = cellSize * lv.gridW;
+  canvas.height = cellSize * lv.gridH;
+  return cellSize;
+}
+
+// ── GAME LOGIC ────────────────────────────────────────────────────────────
+function startGame() {
+  overlay.classList.add('hidden');
+  const lv = LEVELS[currentLevel];
+  const CELL = setupCanvas(lv);
+  wrap.className = 'canvas-wrap';
+
+  const startX = Math.floor(lv.gridW / 2);
+  const startY = Math.floor(lv.gridH / 2);
+  snake = [{x:startX, y:startY}, {x:startX-1, y:startY}, {x:startX-2, y:startY}];
+  dir = {x:1, y:0}; nextDir = {x:1, y:0};
+  score = 0; foodEaten = 0;
+  scoreEl.textContent = 0;
+  foodLeftEl.textContent = lv.foodNeeded;
+
+  obstacles = getObstacles(lv, lv.gridW, lv.gridH);
+  spawnFood(lv);
+  running = true;
+  clearInterval(gameLoop);
+  gameLoop = setInterval(() => tick(lv, CELL), lv.speed);
+}
+
+function tick(lv, CELL) {
+  if (!running) return;
+  dir = nextDir;
+  const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+
+  // Wall collision
+  if (lv.wrap) {
+    head.x = (head.x + lv.gridW) % lv.gridW;
+    head.y = (head.y + lv.gridH) % lv.gridH;
+  } else {
+    if (head.x < 0 || head.x >= lv.gridW || head.y < 0 || head.y >= lv.gridH) { die(lv); return; }
+  }
+
+  // Self collision
+  if (snake.some(s => s.x === head.x && s.y === head.y)) { die(lv); return; }
+
+  // Obstacle collision
+  if (obstacles.some(o => o.x === head.x && o.y === head.y)) { die(lv); return; }
+
+  snake.unshift(head);
+
+  // Food
+  if (head.x === food.x && head.y === food.y) {
+    foodEaten++;
+    score += 10 + (lv.n - 1) * 5;
+    scoreEl.textContent = score;
+    if (score > hiScore) { hiScore = score; hiEl.textContent = hiScore; localStorage.setItem('snakeHi', hiScore); }
+    if (foodEaten >= lv.foodNeeded) { levelComplete(lv); return; }
+    foodLeftEl.textContent = lv.foodNeeded - foodEaten;
+    spawnFood(lv);
+  } else {
+    snake.pop();
+  }
+
+  draw(lv, CELL);
+}
+
+function spawnFood(lv) {
+  const cells = [];
+  for (let x = 0; x < lv.gridW; x++)
+    for (let y = 0; y < lv.gridH; y++)
+      if (!snake.some(s=>s.x===x&&s.y===y) && !obstacles.some(o=>o.x===x&&o.y===y))
+        cells.push({x,y});
+  food = cells[Math.floor(Math.random() * cells.length)];
+}
+
+function die(lv) {
+  running = false; clearInterval(gameLoop);
+  wrap.className = 'canvas-wrap dead';
+  if (score > 0) {
+    const _showDie = () => {
+      ovTitle.style.color = 'var(--magenta)';
+      ovTitle.textContent = 'GAME OVER';
+      ovSub.innerHTML = `SCORE: ${score} &nbsp;·&nbsp; FOOD: ${foodEaten}/${lv.foodNeeded}`;
+      overlay.querySelector('.ov-btns').innerHTML = `
+        <button class="ov-btn primary" id="ov-retry">↺ RETRY</button>
+        <button class="ov-btn secondary" id="ov-menu">MENU</button>`;
+      document.getElementById('ov-retry').addEventListener('click', startGame);
+      document.getElementById('ov-menu').addEventListener('click', () => showIdleOverlay());
+      overlay.classList.remove('hidden');
+    };
+    if(typeof LB !== 'undefined') LB.submit('snake', score, `SCORE: ${score} &nbsp;·&nbsp; LEVEL ${lv.n}`, _showDie);
+    else _showDie();
+  } else {
+    ovTitle.style.color = 'var(--magenta)';
+    ovTitle.textContent = 'GAME OVER';
+    ovSub.innerHTML = `SCORE: ${score} &nbsp;·&nbsp; FOOD: ${foodEaten}/${lv.foodNeeded}`;
+    overlay.querySelector('.ov-btns').innerHTML = `
+      <button class="ov-btn primary" id="ov-retry">↺ RETRY</button>
+      <button class="ov-btn secondary" id="ov-menu">MENU</button>`;
+    document.getElementById('ov-retry').addEventListener('click', startGame);
+    document.getElementById('ov-menu').addEventListener('click', () => showIdleOverlay());
+    overlay.classList.remove('hidden');
+  }
+}
+
+function levelComplete(lv) {
+  running = false; clearInterval(gameLoop);
+  if (!cleared.includes(currentLevel)) {
+    cleared.push(currentLevel);
+    localStorage.setItem('snakeCleared', JSON.stringify(cleared));
+    document.querySelectorAll('.lv-btn')[currentLevel].classList.add('cleared');
+  }
+  wrap.className = 'canvas-wrap win';
+  const isLast = currentLevel === LEVELS.length - 1;
+  const _showWin = () => {
+    ovTitle.style.color = 'var(--green)';
+    ovTitle.textContent = isLast ? '🏆 ARCADE MASTER!' : `LEVEL ${lv.n} CLEAR!`;
+    ovSub.innerHTML = `SCORE: ${score}<br>${isLast ? 'ALL LEVELS COMPLETE!' : 'NEXT LEVEL UNLOCKED'}`;
+    const nextIdx = Math.min(currentLevel + 1, LEVELS.length - 1);
+    overlay.querySelector('.ov-btns').innerHTML = isLast
+      ? `<button class="ov-btn primary" id="ov-replay">↺ REPLAY L10</button>`
+      : `<button class="ov-btn primary" id="ov-next">▶ LEVEL ${lv.n+1}</button><button class="ov-btn secondary" id="ov-menu2">MENU</button>`;
+    if (!isLast) {
+      document.getElementById('ov-next').addEventListener('click', () => { selectLevel(nextIdx); startGame(); });
+      document.getElementById('ov-menu2').addEventListener('click', () => showIdleOverlay());
+    } else {
+      document.getElementById('ov-replay').addEventListener('click', startGame);
+    }
+    overlay.classList.remove('hidden');
+  };
+  LB.submit('snake', score, `SCORE: ${score} &nbsp;·&nbsp; LEVEL ${lv.n} CLEAR`, _showWin);
+}
+
+// ── DRAW ──────────────────────────────────────────────────────────────────
+function draw(lv, CELL) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(6,214,160,0.04)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= lv.gridW; x++) { ctx.beginPath(); ctx.moveTo(x*CELL,0); ctx.lineTo(x*CELL,canvas.height); ctx.stroke(); }
+  for (let y = 0; y <= lv.gridH; y++) { ctx.beginPath(); ctx.moveTo(0,y*CELL); ctx.lineTo(canvas.width,y*CELL); ctx.stroke(); }
+
+  // Obstacles
+  obstacles.forEach(o => {
+    ctx.fillStyle = '#2a1a4a';
+    ctx.fillRect(o.x*CELL, o.y*CELL, CELL, CELL);
+    ctx.strokeStyle = '#4a2a8a';
+    ctx.strokeRect(o.x*CELL+1, o.y*CELL+1, CELL-2, CELL-2);
+  });
+
+  // Food — pulsing circle
+  const pulse = 0.8 + 0.2 * Math.sin(Date.now() / 200);
+  const fc = CELL * 0.4 * pulse;
+  ctx.shadowBlur = 12; ctx.shadowColor = '#f72585';
+  ctx.fillStyle = '#f72585';
+  ctx.beginPath();
+  ctx.arc(food.x*CELL + CELL/2, food.y*CELL + CELL/2, fc, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Snake
+  snake.forEach((seg, i) => {
+    const t = i / snake.length;
+    const r = Math.round(6  + (1-t) * 0);
+    const g = Math.round(214 - t * 60);
+    const b = Math.round(160 - t * 80);
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    if (i === 0) {
+      // Head
+      ctx.shadowBlur = 10; ctx.shadowColor = '#06d6a0';
+      ctx.fillRect(seg.x*CELL+1, seg.y*CELL+1, CELL-2, CELL-2);
+      ctx.shadowBlur = 0;
+      // Eyes
+      const eyeOff = CELL * 0.22;
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.arc(seg.x*CELL+CELL/2 - eyeOff, seg.y*CELL+CELL/2 - eyeOff, CELL*0.08, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(seg.x*CELL+CELL/2 + eyeOff, seg.y*CELL+CELL/2 - eyeOff, CELL*0.08, 0, Math.PI*2); ctx.fill();
+    } else {
+      const pad = 1 + i * 0.03;
+      ctx.fillRect(seg.x*CELL+pad, seg.y*CELL+pad, CELL-pad*2, CELL-pad*2);
+    }
+  });
+}
+
+// ── INPUT ─────────────────────────────────────────────────────────────────
+const DIRS = { ArrowUp:{x:0,y:-1}, ArrowDown:{x:0,y:1}, ArrowLeft:{x:-1,y:0}, ArrowRight:{x:1,y:0}, w:{x:0,y:-1}, s:{x:0,y:1}, a:{x:-1,y:0}, d:{x:1,y:0}, W:{x:0,y:-1}, S:{x:0,y:1}, A:{x:-1,y:0}, D:{x:1,y:0} };
+document.addEventListener('keydown', e => {
+  if (DIRS[e.key]) {
+    e.preventDefault();
+    if (!dir) return; // game not started yet
+    const d = DIRS[e.key];
+    if (d.x !== -dir.x || d.y !== -dir.y) nextDir = d;
+  }
+});
+
+document.querySelectorAll('.dp-btn').forEach(btn => {
+  ['touchstart','mousedown'].forEach(ev => {
+    btn.addEventListener(ev, e => {
+      e.preventDefault();
+      if (!dir) return; // game not started yet
+      const map = {UP:{x:0,y:-1},DOWN:{x:0,y:1},LEFT:{x:-1,y:0},RIGHT:{x:1,y:0}};
+      const d = map[btn.dataset.dir];
+      if (d.x !== -dir.x || d.y !== -dir.y) nextDir = d;
+    });
+  });
+});
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+</script>
+</body>
+</html>

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dodge Blaster — Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#03030c;--border:#1e1e3a;--green:#06d6a0;--magenta:#f72585;--yellow:#f9c74f;--cyan:#00f5d4;--text:#e8e8ff;--muted:#6060a0}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+    .page{position:relative;z-index:1;width:100%;max-width:580px;padding:24px 16px 16px;display:flex;flex-direction:column;align-items:center;gap:14px}
+    .nav{width:100%;display:flex;align-items:center;justify-content:space-between}
+    .back-btn{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-decoration:none;letter-spacing:1px;transition:color .2s}
+    .back-btn:hover{color:var(--green)}
+    .back-btn::before{content:'◄ '}
+    .game-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--green);opacity:.6}
+    h1{font-family:'Press Start 2P',monospace;font-size:clamp(12px,3vw,20px);letter-spacing:3px;color:var(--green);text-shadow:0 0 16px rgba(6,214,160,.5)}
+    .stats{display:flex;gap:22px;flex-wrap:wrap;justify-content:center}
+    .stat{text-align:center}
+    .stat-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:2px;margin-bottom:3px}
+    .stat-value{font-family:'Press Start 2P',monospace;font-size:13px;color:var(--green)}
+    .stat-value.y{color:var(--yellow)}
+    .canvas-wrap{position:relative;border:1px solid #1a1a3a;touch-action:none}
+    #gc{display:block;cursor:none}
+    .overlay{position:absolute;inset:0;background:rgba(3,3,12,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+    .overlay.hidden{display:none}
+    .ov-title{font-family:'Press Start 2P',monospace;font-size:clamp(14px,3vw,22px);letter-spacing:2px;color:var(--green);text-align:center;text-shadow:0 0 16px var(--green)}
+    .ov-sub{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-align:center;line-height:2.4}
+    .ov-btn{font-family:'Press Start 2P',monospace;font-size:9px;padding:12px 28px;border:none;cursor:pointer;letter-spacing:1px;background:var(--green);color:#000;box-shadow:0 0 16px rgba(6,214,160,.4);transition:box-shadow .2s}
+    .ov-btn:hover{box-shadow:0 0 32px var(--green)}
+  </style>
+</head>
+<body>
+<div class="page">
+  <nav class="nav">
+    <a class="back-btn" href="arcade.html">ARCADE</a>
+    <span class="game-label">GAME 12</span>
+  </nav>
+  <h1>DODGE BLASTER</h1>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">SCORE</div><div class="stat-value" id="score">0</div></div>
+    <div class="stat"><div class="stat-label">WAVE</div><div class="stat-value y" id="wave">1</div></div>
+    <div class="stat"><div class="stat-label">BEST</div><div class="stat-value y" id="best">0</div></div>
+  </div>
+  <div class="canvas-wrap" id="cwrap">
+    <canvas id="gc"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="ov-title">DODGE BLASTER</div>
+      <div class="ov-sub">MOVE MOUSE OR FINGER<br>TO DODGE THE BULLETS<br>SURVIVE AS LONG AS YOU CAN</div>
+      <button class="ov-btn" id="ov-start">▶ START</button>
+    </div>
+  </div>
+</div>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+const canvas=document.getElementById('gc'), ctx=canvas.getContext('2d');
+const W=Math.min(window.innerWidth-32,540), H=Math.min(window.innerHeight-200,480);
+canvas.width=W; canvas.height=H;
+
+const PLAYER_R=10;
+let score=0, wave=1, rAF, running=false, best=parseInt(localStorage.getItem('dodgeBest')||'0');
+document.getElementById('best').textContent=best;
+
+let player={x:W/2,y:H*.75}, targetX=W/2, targetY=H*.75;
+let bullets=[], particles=[], frameCount=0, invincible=0;
+let shooters=[];
+
+// Input
+canvas.addEventListener('mousemove',e=>{ const r=canvas.getBoundingClientRect(); targetX=e.clientX-r.left; targetY=e.clientY-r.top; });
+canvas.addEventListener('touchmove',e=>{ e.preventDefault(); const r=canvas.getBoundingClientRect(); targetX=e.touches[0].clientX-r.left; targetY=e.touches[0].clientY-r.top; },{passive:false});
+
+function buildShooters(waveNum){
+  const n=Math.min(2+waveNum,8);
+  const shooters=[];
+  const positions=[
+    [W/2,10],[10,H/2],[W-10,H/2],[W/2,H-10],
+    [10,10],[W-10,10],[10,H-10],[W-10,H-10]
+  ];
+  for(let i=0;i<n;i++){
+    shooters.push({x:positions[i%positions.length][0],y:positions[i%positions.length][1],offset:i*(60/n)});
+  }
+  return shooters;
+}
+
+function startGame(){
+  score=0; wave=1; running=true;
+  player={x:W/2,y:H*.75}; targetX=W/2; targetY=H*.75;
+  bullets=[]; particles=[]; frameCount=0; invincible=90;
+  shooters=buildShooters(1);
+  document.getElementById('score').textContent=0;
+  document.getElementById('wave').textContent=1;
+  document.getElementById('overlay').classList.add('hidden');
+  cancelAnimationFrame(rAF);
+  loop();
+}
+
+function loop(){
+  rAF=requestAnimationFrame(loop);
+  if(running) update();
+  draw();
+}
+
+function update(){
+  frameCount++;
+  if(invincible>0) invincible--;
+
+  // Smooth player movement
+  player.x+=(targetX-player.x)*0.18;
+  player.y+=(targetY-player.y)*0.18;
+  player.x=Math.max(PLAYER_R,Math.min(W-PLAYER_R,player.x));
+  player.y=Math.max(PLAYER_R,Math.min(H-PLAYER_R,player.y));
+
+  // Score
+  score++;
+  if(score%1000===0){
+    wave=Math.floor(score/1000)+1;
+    document.getElementById('wave').textContent=wave;
+    shooters=buildShooters(wave);
+    invincible=60;
+  }
+  document.getElementById('score').textContent=score;
+  if(score>best){best=score;localStorage.setItem('dodgeBest',best);document.getElementById('best').textContent=best;}
+
+  // Shoot bullets from each shooter
+  const interval=Math.max(18,48-wave*4);
+  shooters.forEach(s=>{
+    if((frameCount+s.offset)%interval===0){
+      const ang=Math.atan2(player.y-s.y,player.x-s.x)+((Math.random()-.5)*0.25);
+      const spd=2.8+wave*0.3;
+      bullets.push({x:s.x,y:s.y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,r:5,life:200,color:['#f72585','#f9c74f','#00f5d4'][Math.floor(Math.random()*3)]});
+    }
+  });
+
+  // Spiral pattern every 5 waves
+  if(wave>=5 && frameCount%30===0){
+    const ang=frameCount*0.15;
+    const spd=3+wave*.2;
+    for(let i=0;i<6;i++){
+      const a=ang+i*(Math.PI*2/6);
+      bullets.push({x:W/2,y:H/2,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:4,life:120,color:'#9b5de5'});
+    }
+  }
+
+  bullets=bullets.filter(b=>{ b.x+=b.vx; b.y+=b.vy; b.life--; return b.life>0&&b.x>-20&&b.x<W+20&&b.y>-20&&b.y<H+20; });
+  particles=particles.filter(p=>{ p.x+=p.vx; p.y+=p.vy; p.life--; return p.life>0; });
+
+  // Collision
+  if(invincible===0){
+    for(const b of bullets){
+      if(Math.hypot(b.x-player.x,b.y-player.y)<PLAYER_R+b.r){ die(); return; }
+    }
+  }
+}
+
+function die(){
+  running=false;
+  cancelAnimationFrame(rAF);
+  rAF=null;
+  for(let i=0;i<20;i++) particles.push({x:player.x,y:player.y,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,life:40,color:'#06d6a0'});
+  // Draw one last frame to show the explosion particles, then stop
+  draw();
+  const showOverlay = () => {
+    const ov=document.getElementById('overlay');
+    ov.querySelector('.ov-title').textContent='HIT!';
+    ov.querySelector('.ov-title').style.color='var(--magenta)';
+    ov.querySelector('.ov-sub').innerHTML=`SCORE: ${score} &nbsp;·&nbsp; WAVE: ${wave}`;
+    ov.querySelector('.ov-btn').textContent='↺ RETRY';
+    ov.classList.remove('hidden');
+  };
+  if(typeof LB !== 'undefined' && score > 0){
+    LB.submit('dodge', score, `SCORE: ${score} &nbsp;·&nbsp; WAVE: ${wave}`, showOverlay);
+  } else {
+    showOverlay();
+  }
+}
+
+function draw(){
+  ctx.fillStyle='#03030c'; ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle='rgba(6,214,160,0.04)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // Shooter indicators
+  shooters.forEach(s=>{
+    ctx.fillStyle='rgba(247,37,133,0.5)';
+    ctx.shadowBlur=6; ctx.shadowColor='#f72585';
+    ctx.beginPath(); ctx.arc(s.x,s.y,6,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+  });
+
+  // Bullets
+  bullets.forEach(b=>{
+    ctx.shadowBlur=8; ctx.shadowColor=b.color;
+    ctx.fillStyle=b.color;
+    ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+  });
+
+  // Particles
+  particles.forEach(p=>{
+    ctx.globalAlpha=p.life/40;
+    ctx.fillStyle=p.color;
+    ctx.fillRect(p.x-1,p.y-1,2,2);
+  });
+  ctx.globalAlpha=1;
+
+  // Player
+  if(running||invincible>0){
+    const alpha=invincible>0?(Math.floor(invincible/6)%2===0?1:0.3):1;
+    ctx.globalAlpha=alpha;
+    ctx.shadowBlur=16; ctx.shadowColor='#06d6a0';
+    ctx.strokeStyle='#06d6a0'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(player.x,player.y,PLAYER_R,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle='rgba(6,214,160,0.2)';
+    ctx.beginPath(); ctx.arc(player.x,player.y,PLAYER_R,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#06d6a0';
+    ctx.beginPath(); ctx.arc(player.x,player.y,3,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0; ctx.globalAlpha=1;
+  }
+
+  // Wave text
+  ctx.font="8px 'Press Start 2P'"; ctx.fillStyle='rgba(249,199,79,0.3)'; ctx.textAlign='right';
+  ctx.fillText(`WAVE ${wave}`,W-12,H-12); ctx.textAlign='left';
+}
+
+document.getElementById('ov-start').addEventListener('click',startGame);
+draw();
+</script>
+</body>
+</html>

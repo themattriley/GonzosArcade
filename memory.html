@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Memory Match — Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#07070f;--border:#1e1e3a;--purple:#9b5de5;--magenta:#f72585;--yellow:#f9c74f;--cyan:#00f5d4;--text:#e8e8ff;--muted:#6060a0}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(155,93,229,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(155,93,229,.025) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+    body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px);pointer-events:none}
+    .page{position:relative;z-index:1;width:100%;max-width:640px;padding:32px 20px 60px;display:flex;flex-direction:column;align-items:center;gap:22px}
+    .nav{width:100%;display:flex;align-items:center;justify-content:space-between}
+    .back-btn{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-decoration:none;letter-spacing:1px;transition:color .2s}
+    .back-btn:hover{color:var(--purple)}
+    .back-btn::before{content:'◄ '}
+    .game-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--purple);opacity:.6}
+    h1{font-family:'Press Start 2P',monospace;font-size:clamp(14px,3.5vw,22px);letter-spacing:3px;color:var(--purple);text-shadow:0 0 20px rgba(155,93,229,.5);text-align:center}
+
+    .diff-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+    .diff-btn{font-family:'Press Start 2P',monospace;font-size:8px;padding:9px 12px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;letter-spacing:1px;transition:all .15s}
+    .diff-btn:hover{border-color:var(--purple);color:var(--purple)}
+    .diff-btn.active{border-color:var(--purple);color:var(--bg);background:var(--purple);box-shadow:0 0 12px var(--purple)}
+
+    .stats{display:flex;gap:28px;flex-wrap:wrap;justify-content:center}
+    .stat{text-align:center}
+    .stat-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:2px;margin-bottom:4px}
+    .stat-value{font-family:'Press Start 2P',monospace;font-size:14px;color:var(--purple)}
+    .stat-value.yellow{color:var(--yellow)}
+
+    /* GRID */
+    #card-grid{display:grid;gap:10px;justify-content:center}
+
+    /* CARD */
+    .card{width:var(--card-size);height:var(--card-size);perspective:600px;cursor:pointer}
+    .card-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .35s ease;border-radius:4px}
+    .card.flipped .card-inner,.card.matched .card-inner{transform:rotateY(180deg)}
+    .card-front,.card-back{position:absolute;inset:0;backface-visibility:hidden;border-radius:4px;display:flex;align-items:center;justify-content:center}
+    .card-back{background:linear-gradient(135deg,#1a1a38,#12122a);border:2px solid #2a2a50;font-size:20px}
+    .card-back::after{content:'?';font-family:'Press Start 2P',monospace;font-size:calc(var(--card-size)*0.22);color:#3a3a70}
+    .card-front{background:linear-gradient(135deg,#1e1e3c,#15152a);border:2px solid var(--purple);transform:rotateY(180deg);font-size:calc(var(--card-size)*.48)}
+    .card.matched .card-front{border-color:var(--yellow);box-shadow:0 0 16px rgba(249,199,79,.4);background:linear-gradient(135deg,#2a1a50,#1a1040)}
+    .card:hover:not(.flipped):not(.matched) .card-back{border-color:var(--purple);background:linear-gradient(135deg,#22224a,#1a1a38)}
+
+    /* WIN */
+    #win-screen{display:none;position:fixed;inset:0;background:rgba(7,7,15,.93);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:24px}
+    #win-screen.show{display:flex}
+    .win-title{font-family:'Press Start 2P',monospace;font-size:clamp(16px,4vw,28px);background:linear-gradient(135deg,var(--purple),var(--magenta));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 20px var(--purple));animation:pulse .9s ease infinite alternate}
+    @keyframes pulse{from{filter:drop-shadow(0 0 10px var(--purple))}to{filter:drop-shadow(0 0 28px var(--magenta))}}
+    .win-stats{font-family:'Press Start 2P',monospace;font-size:10px;color:var(--text);text-align:center;line-height:2.6}
+    .win-stats span{color:var(--yellow)}
+    .win-buttons{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+    .win-btn{font-family:'Press Start 2P',monospace;font-size:9px;padding:13px 24px;border:none;cursor:pointer;letter-spacing:1px;transition:all .2s}
+    .win-btn.primary{background:var(--purple);color:#fff;box-shadow:0 0 20px var(--purple)}
+    .win-btn.primary:hover{box-shadow:0 0 40px var(--purple)}
+    .win-btn.secondary{background:transparent;color:var(--muted);border:1px solid var(--border)}
+    .win-btn.secondary:hover{color:var(--text);border-color:var(--text)}
+  </style>
+</head>
+<body>
+<div class="page">
+  <nav class="nav">
+    <a class="back-btn" href="arcade.html">ARCADE</a>
+    <span class="game-label">GAME 05</span>
+  </nav>
+  <h1>MEMORY MATCH</h1>
+
+  <div class="diff-row">
+    <button class="diff-btn active" data-pairs="6">4×3 EASY</button>
+    <button class="diff-btn" data-pairs="10">5×4 MEDIUM</button>
+    <button class="diff-btn" data-pairs="15">6×5 HARD</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">FLIPS</div><div class="stat-value" id="flips">0</div></div>
+    <div class="stat"><div class="stat-label">MATCHES</div><div class="stat-value" id="matches">0</div></div>
+    <div class="stat"><div class="stat-label">TIME</div><div class="stat-value yellow" id="timer">0:00</div></div>
+  </div>
+
+  <div id="card-grid"></div>
+</div>
+
+<div id="win-screen">
+  <div class="win-title">🎉 ALL MATCHED!</div>
+  <div class="win-stats">FLIPS: <span id="w-flips">0</span><br>TIME: <span id="w-time">0:00</span></div>
+  <div class="win-buttons">
+    <button class="win-btn primary" id="win-new">▶ NEW GAME</button>
+    <button class="win-btn secondary" onclick="document.getElementById('win-screen').classList.remove('show')">✕ CLOSE</button>
+  </div>
+</div>
+
+<script>
+  // LB safety shim - no-op if leaderboard.js failed to load
+  if(typeof LB === 'undefined') window.LB = { submit:(_g,_s,_l,cb)=>{ if(cb) cb(); }, show:()=>{}, puzzleScore:()=>0, memoryScore:()=>0, reactionScore:()=>0 };
+const EMOJIS = ['🎮','🕹️','👾','🚀','💎','🌟','🔥','🎯','🎲','🃏','🎸','🎵','🐍','🦊','🦋','🌈','🍕','⚡','🎭','🏆','💡','🔮','🌙','☄️','🎪'];
+let pairs=6, flipped=[], matched=0, flips=0, canFlip=true, timerInt=null, seconds=0;
+
+document.querySelectorAll('.diff-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); pairs=parseInt(btn.dataset.pairs); initGame();
+  });
+});
+
+function initGame(){
+  clearInterval(timerInt); seconds=0; flips=0; matched=0; flipped=[]; canFlip=true;
+  document.getElementById('flips').textContent='0';
+  document.getElementById('matches').textContent='0';
+  document.getElementById('timer').textContent='0:00';
+  document.getElementById('win-screen').classList.remove('show');
+
+  // Layout: determine cols/rows
+  const total = pairs*2;
+  let cols, rows;
+  if(pairs===6){cols=4;rows=3;}
+  else if(pairs===10){cols=5;rows=4;}
+  else{cols=6;rows=5;}
+
+  const maxW = Math.min(window.innerWidth-44, 560);
+  const cardSize = Math.floor((maxW - (cols-1)*10) / cols);
+  document.documentElement.style.setProperty('--card-size', cardSize+'px');
+
+  const grid = document.getElementById('card-grid');
+  grid.style.gridTemplateColumns = `repeat(${cols},${cardSize}px)`;
+  grid.innerHTML='';
+
+  const deck = [...EMOJIS.slice(0,pairs),...EMOJIS.slice(0,pairs)];
+  shuffle(deck);
+
+  deck.forEach((emoji,i)=>{
+    const card = document.createElement('div');
+    card.className='card'; card.dataset.emoji=emoji; card.dataset.index=i;
+    card.innerHTML=`<div class="card-inner"><div class="card-back"></div><div class="card-front">${emoji}</div></div>`;
+    card.addEventListener('click',()=>onCard(card));
+    grid.appendChild(card);
+  });
+
+  // Start timer on first flip
+  timerInt=null;
+}
+
+function onCard(card){
+  if(!canFlip||card.classList.contains('flipped')||card.classList.contains('matched')) return;
+  if(!timerInt) timerInt=setInterval(tick,1000);
+  card.classList.add('flipped');
+  flipped.push(card);
+  flips++; document.getElementById('flips').textContent=flips;
+
+  if(flipped.length===2){
+    canFlip=false;
+    const [a,b]=flipped;
+    if(a.dataset.emoji===b.dataset.emoji){
+      a.classList.add('matched'); b.classList.add('matched');
+      matched++; document.getElementById('matches').textContent=matched;
+      flipped=[]; canFlip=true;
+      if(matched===pairs) setTimeout(onWin,300);
+    } else {
+      setTimeout(()=>{
+        a.classList.remove('flipped'); b.classList.remove('flipped');
+        flipped=[]; canFlip=true;
+      },900);
+    }
+  }
+}
+
+function tick(){
+  seconds++;
+  document.getElementById('timer').textContent=`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+}
+
+function onWin(){
+  clearInterval(timerInt);
+  const lbScore = LB.memoryScore(pairs, flips, seconds);
+  const label = `FLIPS: ${flips} &nbsp;·&nbsp; TIME: ${document.getElementById('timer').textContent} &nbsp;·&nbsp; SCORE: ${lbScore}`;
+  document.getElementById('w-flips').textContent=flips;
+  document.getElementById('w-time').textContent=document.getElementById('timer').textContent;
+  LB.submit('memory_match', lbScore, label, ()=>{ document.getElementById('win-screen').classList.add('show'); });
+}
+
+document.getElementById('win-new').addEventListener('click',()=>{ document.getElementById('win-screen').classList.remove('show'); initGame(); });
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
+
+initGame();
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+</script>
+</body>
+</html>

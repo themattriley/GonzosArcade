@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sound Memory — Mini Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #07070f;
+      --card: #0e0e1c;
+      --border: #1e1e3a;
+      --cyan: #00f5d4;
+      --magenta: #f72585;
+      --yellow: #f9c74f;
+      --purple: #9b5de5;
+      --green: #06d6a0;
+      --orange: #fb8500;
+      --text: #e8e8ff;
+      --muted: #6060a0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Exo 2', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(247,37,133,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(247,37,133,0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px);
+      pointer-events: none;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 680px;
+      padding: 40px 20px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+    }
+
+    /* Nav */
+    .nav {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .back-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 1px;
+      transition: color 0.2s;
+    }
+    .back-btn:hover { color: var(--magenta); }
+    .back-btn::before { content: '◄ '; }
+    .game-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      color: var(--magenta);
+      letter-spacing: 2px;
+      opacity: 0.6;
+    }
+
+    h1 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(16px, 4vw, 26px);
+      letter-spacing: 3px;
+      color: var(--magenta);
+      text-shadow: 0 0 20px rgba(247,37,133,0.5);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* Stats */
+    .stats {
+      display: flex;
+      gap: 36px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .stat { text-align: center; }
+    .stat-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+    .stat-value {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 16px;
+      color: var(--magenta);
+    }
+    .stat-value.yellow { color: var(--yellow); }
+
+    /* Status message */
+    #status-bar {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-align: center;
+      min-height: 24px;
+      color: var(--text);
+      animation: none;
+    }
+    #status-bar.watching { color: var(--cyan); animation: pulse-glow 0.8s ease-in-out infinite alternate; }
+    #status-bar.playing { color: var(--yellow); }
+    #status-bar.wrong { color: var(--magenta); animation: shake 0.3s ease; }
+    #status-bar.success { color: var(--green); }
+
+    @keyframes pulse-glow {
+      from { text-shadow: 0 0 6px currentColor; }
+      to   { text-shadow: 0 0 20px currentColor; }
+    }
+    @keyframes shake {
+      0%,100%{transform:translateX(0)}
+      25%{transform:translateX(-8px)}
+      75%{transform:translateX(8px)}
+    }
+
+    /* Sequence display */
+    .sequence-display {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+      min-height: 28px;
+    }
+    .seq-dot {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+    .seq-dot.filled { background: var(--magenta); box-shadow: 0 0 8px var(--magenta); }
+    .seq-dot.current { background: var(--yellow); box-shadow: 0 0 12px var(--yellow); }
+
+    /* Buttons panel */
+    .buttons-panel {
+      position: relative;
+      padding: 30px;
+      border: 1px solid var(--border);
+      background: #0a0a18;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    /* Circle ring of buttons */
+    .buttons-ring {
+      position: relative;
+      width: 300px;
+      height: 300px;
+    }
+
+    /* Music button */
+    .music-btn {
+      width: 80px;
+      height: 80px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      position: absolute;
+      transition: transform 0.1s, filter 0.15s, box-shadow 0.15s;
+      filter: brightness(0.65) saturate(0.7);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+      transform: translate(-50%, -50%);
+    }
+    .music-btn:disabled { cursor: not-allowed; filter: brightness(0.3) saturate(0.15); }
+    .music-btn:hover:not(:disabled) {
+      filter: brightness(0.9) saturate(1);
+      transform: translate(-50%, -50%) scale(1.1);
+    }
+    .music-btn:active:not(:disabled) {
+      transform: translate(-50%, -50%) scale(0.95);
+    }
+    .music-btn.lit {
+      filter: brightness(1.5) saturate(1.4);
+      box-shadow: 0 0 36px var(--btn-glow), 0 0 70px var(--btn-glow);
+      transform: translate(-50%, -50%) scale(1.12);
+    }
+    .music-btn[data-id="0"] {
+      background: #e03030; --btn-glow: #ff5555;
+      left: 50%; top: 10%;
+    }
+    .music-btn[data-id="1"] {
+      background: #e07820; --btn-glow: #ffaa44;
+      left: 90%; top: 36%;
+    }
+    .music-btn[data-id="2"] {
+      background: #1a9940; --btn-glow: #33dd66;
+      left: 76%; top: 82%;
+    }
+    .music-btn[data-id="3"] {
+      background: #1560c8; --btn-glow: #44aaff;
+      left: 24%; top: 82%;
+    }
+    .music-btn[data-id="4"] {
+      background: #7a18cc; --btn-glow: #bb55ff;
+      left: 10%; top: 36%;
+    }
+
+    /* Speed control */
+    .speed-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .speed-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+    .speed-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: all 0.15s;
+    }
+    .speed-btn:hover { border-color: var(--magenta); color: var(--magenta); }
+    .speed-btn.active { background: var(--magenta); color: var(--bg); border-color: var(--magenta); box-shadow: 0 0 10px var(--magenta); }
+
+    /* Start / action button */
+    #start-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      padding: 16px 40px;
+      border: 2px solid var(--magenta);
+      background: transparent;
+      color: var(--magenta);
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: all 0.2s;
+      box-shadow: 0 0 16px rgba(247,37,133,0.2);
+    }
+    #start-btn:hover {
+      background: var(--magenta);
+      color: var(--bg);
+      box-shadow: 0 0 32px var(--magenta);
+    }
+    #start-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* High score / round info */
+    .round-badge {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      color: var(--yellow);
+      border: 1px solid var(--yellow);
+      padding: 6px 12px;
+      opacity: 0.8;
+      text-align: center;
+    }
+
+    /* Game over screen */
+    #gameover-screen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(7,7,15,0.93);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 20px;
+    }
+    #gameover-screen.show { display: flex; }
+
+    .go-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(18px, 5vw, 32px);
+      color: var(--magenta);
+      text-shadow: 0 0 20px var(--magenta);
+      animation: pulse-glow 0.8s ease infinite alternate;
+    }
+
+    .go-stats {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      color: var(--text);
+      text-align: center;
+      line-height: 2.6;
+    }
+    .go-stats span { color: var(--yellow); }
+
+    .go-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      padding: 14px 28px;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+    .go-btn.primary { background: var(--magenta); color: var(--bg); box-shadow: 0 0 20px var(--magenta); }
+    .go-btn.primary:hover { box-shadow: 0 0 40px var(--magenta); }
+    .go-btn.secondary { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .go-btn.secondary:hover { color: var(--text); border-color: var(--text); }
+
+    .go-buttons { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+
+    /* Instructions */
+    .instructions {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--muted);
+      line-height: 2.4;
+      letter-spacing: 1px;
+      text-align: center;
+      border: 1px solid var(--border);
+      padding: 14px 20px;
+      width: 100%;
+      max-width: 460px;
+    }
+
+    @media (max-width: 480px) {
+      .music-btn { width: 72px; height: 72px; }
+      .music-btn .note-symbol { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+  <nav class="nav">
+    <a class="back-btn" href="arcade-hub.html">HUB</a>
+    <span class="game-label">GAME 02</span>
+  </nav>
+
+  <h1>SOUND MEMORY</h1>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">ROUND</div>
+      <div class="stat-value" id="round-num">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">SEQUENCE</div>
+      <div class="stat-value" id="seq-length">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">BEST</div>
+      <div class="stat-value yellow" id="best-score">0</div>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div id="status-bar">PRESS START TO PLAY</div>
+
+  <!-- Sequence progress dots -->
+  <div class="sequence-display" id="seq-display"></div>
+
+  <!-- Buttons panel -->
+  <div class="buttons-panel">
+
+    <div class="buttons-ring">
+      <button class="music-btn" data-id="0" disabled></button>
+      <button class="music-btn" data-id="1" disabled></button>
+      <button class="music-btn" data-id="2" disabled></button>
+      <button class="music-btn" data-id="3" disabled></button>
+      <button class="music-btn" data-id="4" disabled></button>
+    </div>
+
+    <!-- Speed selector -->
+    <div class="speed-row">
+      <span class="speed-label">SPEED:</span>
+      <button class="speed-btn active" data-speed="700">SLOW</button>
+      <button class="speed-btn" data-speed="500">NORMAL</button>
+      <button class="speed-btn" data-speed="320">FAST</button>
+    </div>
+
+  </div>
+
+  <button id="start-btn">▶ START GAME</button>
+
+  <div class="instructions">
+    WATCH THE SEQUENCE PLAY &amp; LISTEN<br>
+    THEN REPEAT IT IN THE SAME ORDER<br>
+    EACH ROUND ADDS ONE MORE NOTE<br>
+    ONE WRONG NOTE = GAME OVER
+  </div>
+</div>
+
+<!-- Game over screen -->
+<div id="gameover-screen">
+  <div class="go-title" id="go-title">WRONG NOTE!</div>
+  <div class="go-stats">
+    ROUNDS CLEARED: <span id="go-rounds">0</span><br>
+    SEQUENCE LENGTH: <span id="go-length">0</span><br>
+    BEST SCORE: <span id="go-best">0</span>
+  </div>
+  <div class="go-buttons">
+    <button class="go-btn primary" id="go-retry">▶ TRY AGAIN</button>
+    <button class="go-btn secondary" onclick="document.getElementById('gameover-screen').classList.remove('show')">✕ CLOSE</button>
+  </div>
+</div>
+
+<script>
+  // ─── Audio Setup ─────────────────────────────────────────────────────────
+  let audioCtx = null;
+
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  // Pentatonic scale frequencies — pleasing even in random order
+  const NOTES = [
+    { freq: 261.63, wave: 'sine',     name: 'C4'  },   // 0 – DO  (red)
+    { freq: 329.63, wave: 'sine',     name: 'E4'  },   // 1 – RE  (orange)
+    { freq: 392.00, wave: 'triangle', name: 'G4'  },   // 2 – MI  (green)
+    { freq: 523.25, wave: 'triangle', name: 'C5'  },   // 3 – SOL (blue)
+    { freq: 659.25, wave: 'sine',     name: 'E5'  },   // 4 – LA  (purple)
+  ];
+
+  function playNote(id, duration = 350) {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type = NOTES[id].wave;
+    osc.frequency.setValueAtTime(NOTES[id].freq, ctx.currentTime);
+
+    // Nice envelope
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration / 1000 + 0.05);
+  }
+
+  // Wrong-answer buzz
+  function playWrong() {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(120, ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(60, ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.4);
+  }
+
+  // Victory fanfare
+  function playFanfare() {
+    const ctx = getAudioCtx();
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      const t = ctx.currentTime + i * 0.12;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.4, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      osc.start(t); osc.stop(t + 0.35);
+    });
+  }
+
+  // ─── Game State ───────────────────────────────────────────────────────────
+  let sequence = [];
+  let playerIndex = 0;
+  let round = 0;
+  let bestScore = parseInt(localStorage.getItem('soundMemoryBest') || '0');
+  let phase = 'idle';     // idle | watching | playing | over
+  let noteSpeed = 700;    // ms between notes during playback
+  let isLit = false;
+  let lastNote = -1;      // tracks last note added so we never repeat consecutively
+
+  // Always picks a note different from the previous one
+  function randomNote() {
+    let note;
+    do { note = Math.floor(Math.random() * 5); } while (note === lastNote);
+    lastNote = note;
+    return note;
+  }
+
+  const buttons = document.querySelectorAll('.music-btn');
+  const statusBar = document.getElementById('status-bar');
+  const roundEl = document.getElementById('round-num');
+  const seqLenEl = document.getElementById('seq-length');
+  const bestEl = document.getElementById('best-score');
+  const startBtn = document.getElementById('start-btn');
+  const seqDisplay = document.getElementById('seq-display');
+  const gameoverScreen = document.getElementById('gameover-screen');
+
+  bestEl.textContent = bestScore;
+
+  // ─── Speed Buttons ────────────────────────────────────────────────────────
+  document.querySelectorAll('.speed-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (phase !== 'idle') return;
+      document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      noteSpeed = parseInt(btn.dataset.speed);
+    });
+  });
+
+  // ─── Start / Retry ────────────────────────────────────────────────────────
+  startBtn.addEventListener('click', startGame);
+  document.getElementById('go-retry').addEventListener('click', () => {
+    gameoverScreen.classList.remove('show');
+    startGame();
+  });
+
+  function startGame() {
+    getAudioCtx(); // Unlock audio on user gesture
+    sequence = [];
+    playerIndex = 0;
+    round = 0;
+    lastNote = -1;
+    phase = 'idle';
+    startBtn.disabled = true;
+    nextRound();
+  }
+
+  // ─── Round flow ───────────────────────────────────────────────────────────
+  function nextRound() {
+    round++;
+    playerIndex = 0;
+
+    // Add one new random note (guaranteed different from the previous one)
+    sequence.push(randomNote());
+
+    // Briefly flash "ROUND X" then watch
+    roundEl.textContent = round;
+    seqLenEl.textContent = sequence.length;
+
+    setStatus(`ROUND ${round} — WATCH!`, 'watching');
+    setButtonsEnabled(false);
+    buildSeqDots();
+
+    setTimeout(() => playSequence(), 800);
+  }
+
+  async function playSequence() {
+    phase = 'watching';
+    for (let i = 0; i < sequence.length; i++) {
+      await litButton(sequence[i], noteSpeed * 0.6);
+      await wait(noteSpeed - noteSpeed * 0.6 + 60);
+    }
+    // Ready for player
+    phase = 'playing';
+    setStatus('YOUR TURN — REPEAT IT!', 'playing');
+    setButtonsEnabled(true);
+    highlightSeqDot(0);
+  }
+
+  function litButton(id, duration) {
+    return new Promise(resolve => {
+      const btn = buttons[id];
+      btn.classList.add('lit');
+      playNote(id, duration);
+      setTimeout(() => {
+        btn.classList.remove('lit');
+        resolve();
+      }, duration);
+    });
+  }
+
+  // ─── Player input ─────────────────────────────────────────────────────────
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (phase !== 'playing') return;
+      const id = parseInt(btn.dataset.id);
+      handlePlayerNote(id);
+    });
+  });
+
+  function handlePlayerNote(id) {
+    playNote(id, 200);
+    btn_flash(id);
+
+    if (id !== sequence[playerIndex]) {
+      // WRONG
+      wrongAnswer();
+      return;
+    }
+
+    // Correct
+    highlightSeqDot(playerIndex, true);
+    playerIndex++;
+
+    if (playerIndex === sequence.length) {
+      // Completed this round
+      setButtonsEnabled(false);
+      phase = 'watching';
+      setStatus('CORRECT! NEXT ROUND...', 'success');
+      playFanfare();
+
+      // Update best
+      if (round > bestScore) {
+        bestScore = round;
+        localStorage.setItem('soundMemoryBest', bestScore);
+        bestEl.textContent = bestScore;
+        document.getElementById('go-best').textContent = bestScore;
+      }
+
+      setTimeout(() => nextRound(), 1200);
+    } else {
+      highlightSeqDot(playerIndex);
+    }
+  }
+
+  function wrongAnswer() {
+    phase = 'over';
+    setButtonsEnabled(false);
+    playWrong();
+    setStatus('WRONG NOTE! GAME OVER', 'wrong');
+
+    setTimeout(() => {
+      const finalScore = Math.max(0, (round - 1)) * 100;
+      const label = `ROUNDS: ${round-1} &nbsp;·&nbsp; SCORE: ${finalScore}`;
+      if(typeof LB === 'undefined') window.LB = { submit:(_g,_s,_l,cb)=>{ if(cb) cb(); } };
+      LB.submit('sound_memory', finalScore, label, () => {
+        document.getElementById('go-rounds').textContent = round - 1;
+        document.getElementById('go-length').textContent = sequence.length;
+        document.getElementById('go-best').textContent = bestScore;
+        document.getElementById('go-title').textContent =
+          round <= 1 ? 'TOO FAST!' : round <= 3 ? 'NICE TRY!' : round <= 6 ? 'SO CLOSE!' : '🔥 GREAT RUN!';
+        gameoverScreen.classList.add('show');
+        startBtn.disabled = false;
+        phase = 'idle';
+      });
+    }, 900);
+  }
+
+  // ─── Sequence dot display ─────────────────────────────────────────────────
+  function buildSeqDots() {
+    seqDisplay.innerHTML = '';
+    for (let i = 0; i < sequence.length; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'seq-dot';
+      dot.dataset.index = i;
+      seqDisplay.appendChild(dot);
+    }
+  }
+
+  function highlightSeqDot(index, completed = false) {
+    const dots = seqDisplay.querySelectorAll('.seq-dot');
+    dots.forEach((d, i) => {
+      d.classList.remove('current');
+      if (i < index) d.classList.add('filled');
+    });
+    if (!completed && dots[index]) dots[index].classList.add('current');
+    if (completed) dots.forEach(d => d.classList.add('filled'));
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+  function setStatus(text, cls) {
+    statusBar.className = cls || '';
+    statusBar.textContent = text;
+  }
+
+  function setButtonsEnabled(enabled) {
+    buttons.forEach(btn => { btn.disabled = !enabled; });
+  }
+
+  function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function btn_flash(id) {
+    const btn = buttons[id];
+    btn.classList.add('lit');
+    setTimeout(() => btn.classList.remove('lit'), 200);
+  }
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+</body>
+</html>

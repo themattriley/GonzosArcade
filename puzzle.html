@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jigsaw Puzzle — Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#07070f;--border:#1e1e3a;
+      --cyan:#00f5d4;--magenta:#f72585;--yellow:#f9c74f;
+      --text:#e8e8ff;--muted:#6060a0;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,245,212,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,212,.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+    body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px);pointer-events:none;z-index:0}
+    .page{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:32px 20px 60px;display:flex;flex-direction:column;align-items:center;gap:22px}
+    .nav{width:100%;display:flex;align-items:center;justify-content:space-between}
+    .back-btn{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-decoration:none;letter-spacing:1px;transition:color .2s}
+    .back-btn:hover{color:var(--cyan)}
+    .back-btn::before{content:'◄ '}
+    .game-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--cyan);opacity:.6}
+    h1{font-family:'Press Start 2P',monospace;font-size:clamp(14px,3.5vw,24px);letter-spacing:3px;color:var(--cyan);text-shadow:0 0 20px rgba(0,245,212,.5);text-align:center}
+
+    /* UPLOAD */
+    .upload-zone{width:100%;max-width:500px;border:2px dashed var(--border);padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative}
+    .upload-zone:hover,.upload-zone.dragover{border-color:var(--cyan);background:rgba(0,245,212,.04)}
+    .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .upload-icon{font-size:32px;margin-bottom:10px}
+    .upload-text{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--muted);line-height:2;letter-spacing:1px}
+    .upload-text span{color:var(--cyan)}
+    .upload-sub{font-size:11px;color:var(--muted);margin-top:8px;font-weight:300}
+
+    /* DIFF */
+    .diff-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+    .diff-btn{font-family:'Press Start 2P',monospace;font-size:8px;padding:9px 14px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;letter-spacing:1px;transition:all .15s}
+    .diff-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+    .diff-btn.active{border-color:var(--cyan);color:var(--bg);background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+
+    /* STATS */
+    .stats{display:flex;gap:32px;flex-wrap:wrap;justify-content:center}
+    .stat{text-align:center}
+    .stat-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:2px;margin-bottom:4px}
+    .stat-value{font-family:'Press Start 2P',monospace;font-size:14px;color:var(--cyan)}
+
+    /* GAME LAYOUT */
+    .game-layout{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;justify-content:center;width:100%}
+
+    /* BOARD */
+    #board{display:grid;border:2px solid var(--border);background:#050510;box-shadow:0 0 30px rgba(0,245,212,.08);transition:box-shadow .3s;flex-shrink:0}
+    #board.solved{box-shadow:0 0 60px rgba(0,245,212,.5);border-color:var(--cyan)}
+    .piece{cursor:pointer;background-repeat:no-repeat;transition:filter .15s,outline .1s;outline:1px solid rgba(255,255,255,.06)}
+    .piece:hover{filter:brightness(1.15);z-index:2}
+    .piece.selected{outline:3px solid var(--cyan);filter:brightness(1.3);z-index:3}
+    .piece.correct{outline:1px solid rgba(0,245,212,.25)}
+
+    /* SIDEBAR */
+    .sidebar{display:flex;flex-direction:column;gap:14px;width:180px}
+    .preview-box{border:1px solid var(--border);padding:8px;background:#050510}
+    .preview-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:2px;margin-bottom:8px}
+    #preview-canvas{display:block;width:164px;height:164px;opacity:.75}
+    .side-btn{font-family:'Press Start 2P',monospace;font-size:8px;padding:10px 12px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;letter-spacing:1px;transition:all .15s;width:100%;text-align:left}
+    .side-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+
+    /* PLACEHOLDER */
+    .board-placeholder{width:420px;height:420px;max-width:min(90vw,90vh);max-height:min(90vw,90vh);border:2px dashed var(--border);background:#050510;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+    .ph-icon{font-size:48px;opacity:.3}
+    .ph-text{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--muted);text-align:center;line-height:2.2;letter-spacing:1px}
+
+    /* WIN */
+    #win-screen{display:none;position:fixed;inset:0;background:rgba(7,7,15,.92);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:24px}
+    #win-screen.show{display:flex}
+    .win-title{font-family:'Press Start 2P',monospace;font-size:clamp(18px,4vw,30px);background:linear-gradient(135deg,var(--cyan),var(--magenta));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 20px var(--cyan));animation:pulse 1s ease-in-out infinite alternate}
+    @keyframes pulse{from{filter:drop-shadow(0 0 10px var(--cyan))}to{filter:drop-shadow(0 0 30px var(--magenta))}}
+    .win-stats{font-family:'Press Start 2P',monospace;font-size:10px;color:var(--text);text-align:center;line-height:2.6}
+    .win-stats span{color:var(--yellow)}
+    .win-buttons{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+    .win-btn{font-family:'Press Start 2P',monospace;font-size:9px;padding:13px 24px;border:none;cursor:pointer;letter-spacing:1px;transition:all .2s}
+    .win-btn.primary{background:var(--cyan);color:var(--bg);box-shadow:0 0 20px var(--cyan)}
+    .win-btn.primary:hover{box-shadow:0 0 40px var(--cyan)}
+    .win-btn.secondary{background:transparent;color:var(--muted);border:1px solid var(--border)}
+    .win-btn.secondary:hover{color:var(--text);border-color:var(--text)}
+    #confetti{position:fixed;inset:0;pointer-events:none;z-index:99}
+
+    .instructions{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);line-height:2.4;letter-spacing:1px;text-align:center;border:1px solid var(--border);padding:14px 20px;max-width:480px}
+
+    @media(max-width:580px){
+      .sidebar{width:100%;flex-direction:row;flex-wrap:wrap}
+      .preview-box{flex:1}
+      #preview-canvas{width:100%;height:auto}
+    }
+  </style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<div class="page">
+  <nav class="nav">
+    <a class="back-btn" href="arcade.html">ARCADE</a>
+    <span class="game-label">GAME 02</span>
+  </nav>
+  <h1>JIGSAW PUZZLE</h1>
+
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" id="file-input" accept="image/*"/>
+    <div class="upload-icon">📂</div>
+    <div class="upload-text"><span>CLICK OR DROP</span> AN IMAGE<br>TO BUILD YOUR PUZZLE</div>
+    <p class="upload-sub">JPG · PNG · GIF — any size works</p>
+  </div>
+
+  <div class="diff-row">
+    <button class="diff-btn active" data-cols="3">3×3 EASY</button>
+    <button class="diff-btn" data-cols="5">5×5 MEDIUM</button>
+    <button class="diff-btn" data-cols="8">8×8 HARD</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">MOVES</div><div class="stat-value" id="move-count">—</div></div>
+    <div class="stat"><div class="stat-label">TIME</div><div class="stat-value" id="timer">—:——</div></div>
+    <div class="stat"><div class="stat-label">PIECES</div><div class="stat-value" id="progress-count">—</div></div>
+  </div>
+
+  <div class="game-layout">
+    <div id="board-container">
+      <div class="board-placeholder" id="placeholder">
+        <div class="ph-icon">🧩</div>
+        <p class="ph-text">UPLOAD AN IMAGE<br>TO GENERATE<br>YOUR PUZZLE</p>
+      </div>
+      <div id="board" style="display:none"></div>
+    </div>
+    <div class="sidebar" id="sidebar" style="display:none">
+      <div class="preview-box">
+        <div class="preview-label">TARGET</div>
+        <canvas id="preview-canvas" width="164" height="164"></canvas>
+      </div>
+      <button class="side-btn" id="btn-reshuffle">↺ RESHUFFLE</button>
+      <button class="side-btn" id="btn-new-img">📂 NEW IMAGE</button>
+    </div>
+  </div>
+
+  <div class="instructions" id="instr" style="display:none">
+    CLICK A PIECE TO SELECT &nbsp;·&nbsp; CLICK ANOTHER TO SWAP<br>RESTORE THE FULL IMAGE TO WIN
+  </div>
+</div>
+
+<div id="win-screen">
+  <div class="win-title">🎉 PUZZLE SOLVED!</div>
+  <div class="win-stats">MOVES: <span id="win-moves">0</span><br>TIME: <span id="win-time">0:00</span><br>DIFFICULTY: <span id="win-diff">3×3</span></div>
+  <div class="win-buttons">
+    <button class="win-btn primary" id="win-again">▶ PLAY AGAIN</button>
+    <button class="win-btn secondary" onclick="document.getElementById('win-screen').classList.remove('show')">✕ CLOSE</button>
+  </div>
+</div>
+
+<script>
+  // LB safety shim - no-op if leaderboard.js failed to load
+  if(typeof LB === 'undefined') window.LB = { submit:(_g,_s,_l,cb)=>{ if(cb) cb(); }, show:()=>{}, puzzleScore:()=>0, memoryScore:()=>0, reactionScore:()=>0 };
+  let COLS=3, pieces=[], selected=null, moves=0, seconds=0, timerInterval=null, imgDataURL=null;
+  const BOARD_SIZE = Math.min(window.innerWidth - 60, 460);
+
+  const uploadZone=document.getElementById('upload-zone');
+  const fileInput=document.getElementById('file-input');
+  const placeholder=document.getElementById('placeholder');
+  const boardEl=document.getElementById('board');
+  const sidebar=document.getElementById('sidebar');
+  const instr=document.getElementById('instr');
+  const previewCanvas=document.getElementById('preview-canvas');
+  const previewCtx=previewCanvas.getContext('2d');
+  const moveEl=document.getElementById('move-count');
+  const timerEl=document.getElementById('timer');
+  const progressEl=document.getElementById('progress-count');
+  const winScreen=document.getElementById('win-screen');
+
+  document.querySelectorAll('.diff-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active'); COLS=parseInt(btn.dataset.cols);
+      if(imgDataURL) buildPuzzle();
+    });
+  });
+
+  fileInput.addEventListener('change',e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
+  uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.classList.add('dragover')});
+  uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('dragover'));
+  uploadZone.addEventListener('drop',e=>{
+    e.preventDefault(); uploadZone.classList.remove('dragover');
+    if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+  });
+
+  document.getElementById('btn-new-img').addEventListener('click',()=>{ fileInput.value=''; fileInput.click(); });
+  document.getElementById('btn-reshuffle').addEventListener('click',()=>{ if(imgDataURL) buildPuzzle(); });
+  document.getElementById('win-again').addEventListener('click',()=>{ winScreen.classList.remove('show'); buildPuzzle(); });
+
+  function loadFile(file){
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      const size=Math.min(img.width,img.height);
+      const ox=(img.width-size)/2, oy=(img.height-size)/2;
+      const c=document.createElement('canvas');
+      c.width=c.height=600;
+      c.getContext('2d').drawImage(img,ox,oy,size,size,0,0,600,600);
+      imgDataURL=c.toDataURL('image/jpeg',.92);
+      URL.revokeObjectURL(url);
+      previewCtx.drawImage(c,0,0,164,164);
+      buildPuzzle();
+    };
+    img.src=url;
+  }
+
+  function buildPuzzle(){
+    if(!imgDataURL) return;
+    placeholder.style.display='none';
+    boardEl.style.display='grid';
+    sidebar.style.display='flex';
+    instr.style.display='block';
+    uploadZone.style.display='none';
+    winScreen.classList.remove('show');
+    stopTimer(); moves=0; selected=null;
+    moveEl.textContent='0'; timerEl.textContent='0:00'; boardEl.classList.remove('solved');
+
+    const PIECE=Math.floor(BOARD_SIZE/COLS);
+    const BOARD=PIECE*COLS;
+    boardEl.style.gridTemplateColumns=`repeat(${COLS},${PIECE}px)`;
+    boardEl.style.width=BOARD+'px'; boardEl.style.height=BOARD+'px';
+    boardEl.innerHTML='';
+
+    const total=COLS*COLS;
+    progressEl.textContent=`0/${total}`;
+    document.getElementById('win-diff').textContent=`${COLS}×${COLS}`;
+    pieces=Array.from({length:total},(_,i)=>i);
+    do{shuffle(pieces);}while(isSolved());
+
+    for(let i=0;i<total;i++){
+      const div=document.createElement('div');
+      div.className='piece'; div.dataset.pos=i;
+      div.style.width=PIECE+'px'; div.style.height=PIECE+'px';
+      div.style.backgroundImage=`url('${imgDataURL}')`;
+      div.style.backgroundSize=`${BOARD}px ${BOARD}px`;
+      setPos(div,pieces[i],PIECE);
+      div.addEventListener('click',()=>onClick(i));
+      boardEl.appendChild(div);
+    }
+    updateProg(); startTimer();
+  }
+
+  function setPos(div,orig,PIECE){
+    const row=Math.floor(orig/COLS), col=orig%COLS;
+    div.style.backgroundPosition=`-${col*PIECE}px -${row*PIECE}px`;
+    div.classList.toggle('correct',orig===parseInt(div.dataset.pos));
+  }
+
+  function onClick(pos){
+    if(selected===null){ selected=pos; boardEl.children[pos].classList.add('selected'); }
+    else if(selected===pos){ boardEl.children[pos].classList.remove('selected'); selected=null; }
+    else{
+      const PIECE=Math.floor(BOARD_SIZE/COLS);
+      [pieces[selected],pieces[pos]]=[pieces[pos],pieces[selected]];
+      setPos(boardEl.children[selected],pieces[selected],PIECE);
+      setPos(boardEl.children[pos],pieces[pos],PIECE);
+      boardEl.children[selected].classList.remove('selected');
+      selected=null; moves++; moveEl.textContent=moves;
+      updateProg(); if(isSolved()) onWin();
+    }
+  }
+
+  function isSolved(){ return pieces.every((v,i)=>v===i); }
+  function updateProg(){ progressEl.textContent=`${pieces.filter((v,i)=>v===i).length}/${pieces.length}`; }
+  function onWin(){
+    stopTimer(); boardEl.classList.add('solved');
+    const lbScore = LB.puzzleScore(moves, seconds, COLS);
+    const label = `MOVES: ${moves} &nbsp;·&nbsp; TIME: ${timerEl.textContent} &nbsp;·&nbsp; SCORE: ${lbScore}`;
+    setTimeout(()=>{
+      document.getElementById('win-moves').textContent=moves;
+      document.getElementById('win-time').textContent=timerEl.textContent;
+      LB.submit('jigsaw_puzzle', lbScore, label, ()=>{ winScreen.classList.add('show'); launchConfetti(); });
+    },400);
+  }
+  function startTimer(){ seconds=0; timerEl.textContent='0:00'; timerInterval=setInterval(()=>{ seconds++; timerEl.textContent=`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`; },1000); }
+  function stopTimer(){ clearInterval(timerInterval); }
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} }
+
+  function launchConfetti(){
+    const canvas=document.getElementById('confetti'), ctx=canvas.getContext('2d');
+    canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+    const P=Array.from({length:130},()=>({x:Math.random()*canvas.width,y:Math.random()*canvas.height-canvas.height,r:Math.random()*6+3,d:Math.random()*3+1,color:['#00f5d4','#f72585','#f9c74f','#9b5de5','#fff'][Math.floor(Math.random()*5)],tilt:0,tiltAngle:0,tiltSpeed:Math.random()*.1+.05}));
+    let frame=0;
+    function draw(){ ctx.clearRect(0,0,canvas.width,canvas.height); P.forEach(p=>{p.tiltAngle+=p.tiltSpeed;p.y+=p.d;p.tilt=Math.sin(p.tiltAngle)*12;ctx.beginPath();ctx.lineWidth=p.r;ctx.strokeStyle=p.color;ctx.moveTo(p.x+p.tilt+p.r/2,p.y);ctx.lineTo(p.x+p.tilt,p.y+p.tilt+p.r/2);ctx.stroke();if(p.y>canvas.height)p.y=-10;}); if(++frame<260)requestAnimationFrame(draw); else ctx.clearRect(0,0,canvas.width,canvas.height); }
+    draw();
+  }
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+</script>
+</body>
+</html>

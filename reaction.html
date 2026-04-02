@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reaction Test — Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#07070f;--border:#1e1e3a;--blue:#4cc9f0;--magenta:#f72585;--yellow:#f9c74f;--green:#06d6a0;--red:#ef233c;--text:#e8e8ff;--muted:#6060a0}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(76,201,240,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(76,201,240,.025) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+    body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px);pointer-events:none}
+    .page{position:relative;z-index:1;width:100%;max-width:560px;padding:32px 20px 60px;display:flex;flex-direction:column;align-items:center;gap:24px}
+    .nav{width:100%;display:flex;align-items:center;justify-content:space-between}
+    .back-btn{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-decoration:none;letter-spacing:1px;transition:color .2s}
+    .back-btn:hover{color:var(--blue)}
+    .back-btn::before{content:'◄ '}
+    .game-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--blue);opacity:.6}
+    h1{font-family:'Press Start 2P',monospace;font-size:clamp(14px,3.5vw,22px);letter-spacing:3px;color:var(--blue);text-shadow:0 0 20px rgba(76,201,240,.5);text-align:center}
+
+    .stats{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
+    .stat{text-align:center}
+    .stat-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:2px;margin-bottom:4px}
+    .stat-value{font-family:'Press Start 2P',monospace;font-size:14px;color:var(--blue)}
+    .stat-value.yellow{color:var(--yellow)}
+    .stat-value.green{color:var(--green)}
+
+    /* REACTION PAD */
+    #pad{
+      width:100%; max-width:480px; aspect-ratio:1;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+      border:2px solid var(--border);
+      background:#04040e;
+      cursor:pointer;
+      user-select:none; -webkit-user-select:none;
+      position:relative;
+      overflow:hidden;
+      transition:background .15s, border-color .15s, box-shadow .15s;
+    }
+    #pad.waiting{background:#04040e; border-color:var(--border); box-shadow:none}
+    #pad.ready{background:#0a1a0a; border-color:var(--green); box-shadow:0 0 40px rgba(6,214,160,.35); cursor:pointer}
+    #pad.too-soon{background:#1a040a; border-color:var(--red); box-shadow:0 0 30px rgba(239,35,60,.25)}
+    #pad.result{background:#040d14; border-color:var(--blue); box-shadow:0 0 30px rgba(76,201,240,.2)}
+
+    #pad-label{
+      font-family:'Press Start 2P',monospace;
+      font-size:clamp(14px,4vw,22px);
+      letter-spacing:2px; text-align:center; line-height:1.8;
+      transition:color .15s;
+    }
+    #pad.waiting #pad-label{color:var(--muted)}
+    #pad.ready   #pad-label{color:var(--green); animation:glow-pulse .4s ease infinite alternate}
+    #pad.too-soon #pad-label{color:var(--red)}
+    #pad.result   #pad-label{color:var(--blue)}
+    @keyframes glow-pulse{from{text-shadow:0 0 8px var(--green)}to{text-shadow:0 0 30px var(--green)}}
+
+    #pad-sub{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-align:center;line-height:2}
+    #reaction-ms{font-family:'Press Start 2P',monospace;font-size:clamp(28px,8vw,52px);color:var(--blue);text-shadow:0 0 20px var(--blue)}
+    #reaction-grade{font-family:'Press Start 2P',monospace;font-size:12px;letter-spacing:2px;text-align:center}
+
+    /* History bars */
+    .history-wrap{width:100%;max-width:480px}
+    .history-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:2px;margin-bottom:10px}
+    .history-bars{display:flex;gap:6px;align-items:flex-end;height:60px}
+    .h-bar{flex:1;min-width:0;background:var(--blue);opacity:.5;transition:all .3s;border-radius:2px 2px 0 0;position:relative}
+    .h-bar.best{background:var(--green);opacity:.9}
+    .h-bar-label{font-family:'Press Start 2P',monospace;font-size:6px;color:var(--muted);text-align:center;margin-top:4px}
+
+    .instructions{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);line-height:2.4;letter-spacing:1px;text-align:center;border:1px solid var(--border);padding:14px 20px;max-width:440px}
+  </style>
+</head>
+<body>
+<div class="page">
+  <nav class="nav">
+    <a class="back-btn" href="arcade.html">ARCADE</a>
+    <span class="game-label">GAME 07</span>
+  </nav>
+  <h1>REACTION TEST</h1>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">ROUND</div><div class="stat-value" id="round">—</div></div>
+    <div class="stat"><div class="stat-label">LAST</div><div class="stat-value" id="last-ms">—</div></div>
+    <div class="stat"><div class="stat-label">BEST</div><div class="stat-value green" id="best-ms">—</div></div>
+    <div class="stat"><div class="stat-label">AVG</div><div class="stat-value yellow" id="avg-ms">—</div></div>
+  </div>
+
+  <div id="pad" class="waiting">
+    <div id="pad-label">CLICK TO START</div>
+    <div id="pad-sub"></div>
+    <div id="reaction-ms" style="display:none"></div>
+    <div id="reaction-grade" style="display:none"></div>
+  </div>
+
+  <div class="history-wrap">
+    <div class="history-label">LAST 8 ROUNDS</div>
+    <div class="history-bars" id="history-bars"></div>
+  </div>
+
+  <div class="instructions">
+    WAIT FOR THE GREEN FLASH<br>THEN CLICK AS FAST AS YOU CAN<br>CLICKING TOO EARLY = PENALTY<br>5 ROUNDS PER SESSION
+  </div>
+</div>
+
+<script>
+  // LB safety shim - no-op if leaderboard.js failed to load
+  if(typeof LB === 'undefined') window.LB = { submit:(_g,_s,_l,cb)=>{ if(cb) cb(); }, show:()=>{}, puzzleScore:()=>0, memoryScore:()=>0, reactionScore:()=>0 };
+const ROUNDS = 5;
+let phase='idle', waitTimer=null, startTime=0, round=0, results=[], allBest=parseInt(localStorage.getItem('reactionBest')||'9999');
+
+const pad        = document.getElementById('pad');
+const padLabel   = document.getElementById('pad-label');
+const padSub     = document.getElementById('pad-sub');
+const reactionMs = document.getElementById('reaction-ms');
+const reactionGrd= document.getElementById('reaction-grade');
+const roundEl    = document.getElementById('round');
+const lastEl     = document.getElementById('last-ms');
+const bestEl     = document.getElementById('best-ms');
+const avgEl      = document.getElementById('avg-ms');
+
+if(allBest<9999) bestEl.textContent = allBest+'ms';
+
+function grade(ms){
+  if(ms<150) return {label:'⚡ SUPERHUMAN',  color:'#06d6a0'};
+  if(ms<200) return {label:'🔥 INCREDIBLE',  color:'#f9c74f'};
+  if(ms<250) return {label:'✨ EXCELLENT',   color:'#00f5d4'};
+  if(ms<300) return {label:'👍 GREAT',       color:'#4cc9f0'};
+  if(ms<400) return {label:'👌 GOOD',        color:'#9b5de5'};
+  if(ms<500) return {label:'🙂 AVERAGE',     color:'#6060a0'};
+  return             {label:'💤 SLOW',        color:'#f72585'};
+}
+
+pad.addEventListener('click', onClick);
+pad.addEventListener('touchstart', e=>{ e.preventDefault(); onClick(); }, {passive:false});
+
+function onClick(){
+  if(phase==='idle'){
+    startSession();
+  } else if(phase==='waiting'){
+    // Too soon!
+    clearTimeout(waitTimer);
+    tooSoon();
+  } else if(phase==='ready'){
+    // Measure reaction
+    const ms = Date.now() - startTime;
+    showResult(ms);
+  } else if(phase==='result'||phase==='toosoon'){
+    if(round < ROUNDS) nextRound();
+    else endSession();
+  }
+}
+
+function startSession(){
+  round=0; results=[];
+  pad.className='waiting';
+  nextRound();
+}
+
+function nextRound(){
+  round++;
+  roundEl.textContent=`${round}/${ROUNDS}`;
+  phase='waiting';
+  pad.className='waiting';
+  padLabel.textContent='GET READY...';
+  padSub.textContent='';
+  reactionMs.style.display='none';
+  reactionGrd.style.display='none';
+  const delay = 1500 + Math.random() * 3500;
+  waitTimer = setTimeout(goGreen, delay);
+}
+
+function goGreen(){
+  phase='ready';
+  startTime = Date.now();
+  pad.className='ready';
+  padLabel.textContent='CLICK NOW!';
+}
+
+function tooSoon(){
+  phase='toosoon';
+  pad.className='too-soon';
+  padLabel.textContent='TOO EARLY!';
+  padSub.textContent=round<ROUNDS?'CLICK TO CONTINUE':'CLICK TO SEE RESULTS';
+  reactionMs.style.display='none';
+  reactionGrd.style.display='none';
+  results.push(9999);
+  updateStats();
+  renderBars();
+}
+
+function showResult(ms){
+  phase='result';
+  results.push(ms);
+  if(ms < allBest){ allBest=ms; localStorage.setItem('reactionBest',ms); }
+  updateStats();
+  renderBars();
+  pad.className='result';
+  reactionMs.style.display='block';
+  reactionMs.textContent=ms+'ms';
+  const g = grade(ms);
+  reactionGrd.style.display='block';
+  reactionGrd.style.color=g.color;
+  reactionGrd.textContent=g.label;
+  padLabel.textContent='';
+  padSub.textContent=round<ROUNDS?'CLICK FOR NEXT ROUND':'CLICK TO SEE RESULTS';
+}
+
+function endSession(){
+  phase='idle';
+  const valid=results.filter(r=>r<9999);
+  const avg=valid.length?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length):0;
+  const lbScore = avg>0 ? LB.reactionScore(avg) : 0;
+  pad.className='result';
+  reactionMs.style.display='none';
+  reactionGrd.style.display='block';
+  const g=grade(avg);
+  reactionGrd.style.color=g.color;
+  reactionGrd.textContent='SESSION COMPLETE';
+  padLabel.textContent=`AVG: ${avg}ms`;
+  padSub.textContent='';
+  roundEl.textContent='✓';
+  if(lbScore>0){
+    LB.submit('reaction', lbScore, `AVG: ${avg}ms &nbsp;·&nbsp; SCORE: ${lbScore}`, ()=>{
+      padSub.textContent='CLICK TO PLAY AGAIN';
+    });
+  } else {
+    padSub.textContent='CLICK TO PLAY AGAIN';
+  }
+}
+
+function updateStats(){
+  const valid=results.filter(r=>r<9999);
+  if(valid.length){ lastEl.textContent=valid[valid.length-1]+'ms'; }
+  bestEl.textContent=allBest<9999?allBest+'ms':'—';
+  if(valid.length>1) avgEl.textContent=Math.round(valid.reduce((a,b)=>a+b,0)/valid.length)+'ms';
+}
+
+function renderBars(){
+  const container=document.getElementById('history-bars');
+  container.innerHTML='';
+  const valid=results.filter(r=>r<9999);
+  if(!valid.length) return;
+  const minMs=Math.min(...valid), maxMs=Math.max(...valid,600);
+  const bestIdx=results.indexOf(Math.min(...valid));
+  results.forEach((r,i)=>{
+    const col=document.createElement('div');
+    col.className='h-bar'+(i===bestIdx?' best':'');
+    const h=r>=9999?10:Math.max(8,Math.round(60*(1-(r-100)/(maxMs-100||1))));
+    col.style.height=Math.min(60,h)+'px';
+    col.title=r>=9999?'TOO SOON':r+'ms';
+    const lbl=document.createElement('div');
+    lbl.className='h-bar-label';
+    lbl.textContent=r>=9999?'!':r>999?'>1s':r+'';
+    col.appendChild(lbl);
+    container.appendChild(col);
+  });
+}
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+</script>
+</body>
+</html>

@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>THE ARCADE — Mini Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #05050e;
+      --wall: #0b0b1a;
+      --floor: #080812;
+      --border: #1a1a34;
+      --cyan: #00f5d4;
+      --magenta: #f72585;
+      --yellow: #f9c74f;
+      --purple: #9b5de5;
+      --green: #06d6a0;
+      --orange: #fb8500;
+      --red: #ef233c;
+      --blue: #4cc9f0;
+      --text: #e8e8ff;
+      --muted: #5050a0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Exo 2', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Scanlines */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px);
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* ── NAV ── */
+    .nav {
+      position: relative; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(5,5,14,0.9);
+      backdrop-filter: blur(8px);
+    }
+    .back-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px; color: var(--muted);
+      text-decoration: none; letter-spacing: 1px;
+      transition: color 0.2s;
+    }
+    .back-btn:hover { color: var(--cyan); }
+    .back-btn::before { content: '◄ '; }
+    .nav-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(12px, 2.5vw, 18px);
+      letter-spacing: 4px;
+      background: linear-gradient(90deg, var(--cyan), var(--magenta));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 12px rgba(0,245,212,0.4));
+    }
+    .nav-coins {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px; color: var(--yellow);
+      animation: blink 2s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ── ARCADE ROOM ── */
+    .arcade-room {
+      position: relative;
+      padding: 0 0 60px;
+    }
+
+    /* Ceiling strip with lights */
+    .ceiling {
+      height: 60px;
+      background: linear-gradient(180deg, #080814 0%, #0e0e22 100%);
+      position: relative;
+      display: flex; align-items: center; justify-content: space-evenly;
+      border-bottom: 2px solid #1a1a3a;
+    }
+    .ceiling-light {
+      width: 3px; height: 40px;
+      background: linear-gradient(180deg, transparent, var(--cl), transparent);
+      box-shadow: 0 0 20px var(--cl), 0 20px 60px var(--cl);
+      opacity: 0.5;
+    }
+
+    /* Neon sign */
+    .neon-sign {
+      text-align: center;
+      padding: 28px 20px 10px;
+    }
+    .neon-sign h2 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(10px, 2vw, 16px);
+      letter-spacing: 6px;
+      color: var(--magenta);
+      text-shadow: 0 0 10px var(--magenta), 0 0 30px var(--magenta), 0 0 60px var(--magenta);
+      animation: flicker 4s ease-in-out infinite;
+    }
+    @keyframes flicker {
+      0%,19%,21%,23%,25%,54%,56%,100% { opacity: 1; }
+      20%,24%,55% { opacity: 0.6; }
+    }
+    .neon-sub {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px; color: var(--muted);
+      letter-spacing: 3px; margin-top: 8px;
+    }
+
+    /* ── CABINET GRID ── */
+    .cabinet-hall {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 28px;
+      padding: 36px 32px 20px;
+      position: relative;
+    }
+
+    /* Floor glow strip */
+    .cabinet-hall::before {
+      content: '';
+      position: absolute;
+      bottom: -10px; left: 5%; right: 5%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), var(--magenta), var(--cyan), transparent);
+      opacity: 0.3;
+      box-shadow: 0 0 20px var(--cyan);
+    }
+
+    /* ── SINGLE CABINET ── */
+    .cabinet {
+      width: 160px;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.2s ease;
+      text-decoration: none;
+    }
+    .cabinet:hover { transform: translateY(-8px); }
+    .cabinet:hover .cab-screen-glow { opacity: 1; }
+    .cabinet.locked { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+
+    /* Marquee (top) */
+    .cab-marquee {
+      background: var(--game-color);
+      color: #000;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      letter-spacing: 1px;
+      text-align: center;
+      padding: 10px 6px 8px;
+      clip-path: polygon(4% 0%, 96% 0%, 100% 100%, 0% 100%);
+      position: relative;
+      z-index: 2;
+      text-shadow: none;
+      box-shadow: 0 0 20px var(--game-color), 0 0 40px var(--game-color);
+      line-height: 1.6;
+    }
+
+    /* Cabinet body */
+    .cab-body {
+      background: linear-gradient(160deg, #12122a 0%, #0e0e1e 60%, #0a0a18 100%);
+      border: 2px solid #222240;
+      border-top: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .cab-body::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, transparent 50%);
+    }
+
+    /* Screen bezel */
+    .cab-bezel {
+      margin: 14px 14px 0;
+      background: #08081a;
+      border: 3px solid #1e1e3a;
+      padding: 4px;
+      position: relative;
+    }
+    .cab-screen {
+      background: #000;
+      height: 110px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 42px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cab-screen::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.3) 3px, rgba(0,0,0,0.3) 4px);
+      pointer-events: none;
+    }
+    .cab-screen-glow {
+      position: absolute; inset: -10px;
+      background: radial-gradient(ellipse, var(--game-color), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    /* Screen idle animation — scan line sweep */
+    .cab-screen::before {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      height: 30px;
+      background: linear-gradient(180deg, transparent, rgba(255,255,255,0.04), transparent);
+      animation: scan 3s linear infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+    @keyframes scan { from{top:-30px} to{top:110px} }
+
+    /* Game number badge */
+    .cab-badge {
+      position: absolute;
+      top: 6px; right: 6px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      color: var(--game-color);
+      border: 1px solid var(--game-color);
+      padding: 2px 5px;
+      background: rgba(0,0,0,0.7);
+    }
+
+    /* Control panel */
+    .cab-controls {
+      background: linear-gradient(180deg, #0f0f22, #0c0c1c);
+      padding: 12px 14px 10px;
+      margin: 0 6px;
+      display: flex; align-items: center; gap: 8px;
+      border-top: 2px solid #1a1a38;
+    }
+    .cab-stick {
+      width: 12px; height: 12px;
+      background: radial-gradient(circle at 35% 35%, #555, #222);
+      border-radius: 50%;
+      border: 2px solid #444;
+      flex-shrink: 0;
+    }
+    .cab-btns { display: flex; gap: 5px; }
+    .cab-btn {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,0,0,0.5);
+      flex-shrink: 0;
+    }
+
+    /* Base */
+    .cab-base {
+      background: #0c0c1c;
+      border: 2px solid #181830;
+      border-top: none;
+      height: 22px;
+      margin: 0 14px;
+      clip-path: polygon(0% 0%, 100% 0%, 88% 100%, 12% 100%);
+    }
+    .cab-feet {
+      display: flex; justify-content: space-between;
+      padding: 0 26px;
+    }
+    .cab-foot {
+      width: 20px; height: 8px;
+      background: #0a0a18;
+      border: 1px solid #1a1a30;
+      border-top: none;
+    }
+
+    /* Game title tooltip on hover */
+    .cab-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--game-color);
+      text-align: center;
+      padding: 10px 4px 4px;
+      letter-spacing: 1px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      text-shadow: 0 0 8px var(--game-color);
+    }
+    .cabinet:hover .cab-label { opacity: 1; }
+
+    /* ── STATUS BAR ── */
+    .status-bar {
+      text-align: center;
+      padding: 20px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      color: var(--muted);
+      letter-spacing: 2px;
+    }
+
+    /* ── COMING SOON OVERLAY ── */
+    .coming-label {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--yellow);
+      background: rgba(0,0,0,0.8);
+      padding: 4px 8px;
+      letter-spacing: 1px;
+      white-space: nowrap;
+      z-index: 5;
+    }
+
+    @media (max-width: 600px) {
+      .cabinet { width: 130px; }
+      .cab-screen { height: 90px; font-size: 34px; }
+      .cabinet-hall { gap: 16px; padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="back-btn" href="arcade-hub.html">HUB</a>
+  <span class="nav-title">THE ARCADE</span>
+  <span class="nav-coins">● INSERT COIN</span>
+</nav>
+
+<!-- Ceiling with strip lights -->
+<div class="ceiling">
+  <div class="ceiling-light" style="--cl:#00f5d4"></div>
+  <div class="ceiling-light" style="--cl:#f72585"></div>
+  <div class="ceiling-light" style="--cl:#f9c74f"></div>
+  <div class="ceiling-light" style="--cl:#9b5de5"></div>
+  <div class="ceiling-light" style="--cl:#00f5d4"></div>
+  <div class="ceiling-light" style="--cl:#f72585"></div>
+  <div class="ceiling-light" style="--cl:#4cc9f0"></div>
+  <div class="ceiling-light" style="--cl:#06d6a0"></div>
+</div>
+
+<div class="neon-sign">
+  <h2>GAME ZONE</h2>
+  <p class="neon-sub">SELECT A MACHINE TO PLAY</p>
+</div>
+
+<div class="arcade-room">
+  <div class="cabinet-hall">
+
+    <!-- 1. MUSIC MEMORY -->
+    <a class="cabinet" href="music.html" style="--game-color:#f72585">
+      <div class="cab-marquee">SOUND<br>MEMORY</div>
+      <div class="cab-body">
+        <div class="cab-bezel">
+          <div class="cab-screen">
+            🎵
+            <div class="cab-screen-glow"></div>
+            <div class="cab-badge">01</div>
+          </div>
+        </div>
+        <div class="cab-controls">
+          <div class="cab-stick"></div>
+          <div class="cab-btns">
+            <div class="cab-btn" style="background:#e03030"></div>
+            <div class="cab-btn" style="background:#e07820"></div>
+            <div class="cab-btn" style="background:#1a9940"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cab-base"></div>
+      <div class="cab-feet"><div class="cab-foot"></div><div class="cab-foot"></div></div>
+      <div class="cab-label">SOUND MEMORY</div>
+    </a>
+
+    <!-- 2. JIGSAW PUZZLE -->
+    <a class="cabinet" href="puzzle.html" style="--game-color:#00f5d4">
+      <div class="cab-marquee">JIGSAW<br>PUZZLE</div>
+      <div class="cab-body">
+        <div class="cab-bezel">
+          <div class="cab-screen">
+            🧩
+            <div class="cab-screen-glow"></div>
+            <div class="cab-badge">02</div>
+          </div>
+        </div>
+        <div class="cab-controls">
+          <div class="cab-stick"></div>
+          <div class="cab-btns">
+            <div class="cab-btn" style="background:#00f5d4"></div>
+            <div class="cab-btn" style="background:#00c4a8"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cab-base"></div>
+      <div class="cab-feet"><div class="cab-foot"></div><div class="cab-foot"></div></div>
+      <div class="cab-label">JIGSAW PUZZLE</div>
+    </a>
+
+    <!-- 3. SNAKE -->
+    <a class="cabinet" href="snake.html" style="--game-color:#06d6a0">
+      <div class="cab-marquee">SNAKE<br>CLASSIC</div>
+      <div class="cab-body">
+        <div class="cab-bezel">
+          <div class="cab-screen">
+            🐍
+            <div class="cab-screen-glow"></div>
+            <div class="cab-badge">03</div>
+          </div>
+        </div>
+        <div class="cab-controls">
+          <div class="cab-stick"></div>
+          <div class="cab-btns">
+            <div class="cab-btn" style="background:#06d6a0"></div>
+            <div class="cab-btn" style="background:#04a07a"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cab-base"></div>
+      <div class="cab-feet"><div class="cab-foot"></div><div class="cab-foot"></div></div>
+      <div class="cab-label">SNAKE CLASSIC</div>
+    </a>
+
+    <!-- 4. BREAKOUT -->
+    <a class="cabinet" href="breakout.html" style="--game-color:#f9c74f">
+      <div class="cab-marquee">BRICK<br>BREAKER</div>
+      <div class="cab-body">
+        <div class="cab-bezel">
+          <div class="cab-screen">
+            🏓
+            <div class="cab-screen-glow"></div>
+            <div class="cab-badge">04</div>
+          </div>
+        </div>
+        <div class="cab-controls">
+          <div class="cab-stick"></div>
+          <div class="cab-btns">
+            <div class="cab-btn" style="background:#f9c74f"></div>
+            <div class="cab-btn" style="background:#d4a820"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cab-base"></div>
+      <div class="cab-feet"><div class="cab-foot"></div><div class="cab-foot"></div></div>
+      <div class="cab-label">BRICK BREAKER</div>
+    </a>
+
+    <!-- 5. MEMORY MATCH -->
+    <a class="cabinet" href="memory.html" style="--game-color:#9b5de5">
+      <div class="cab-marquee">MEMORY<br>MATCH</div>
+      <div class="cab-body">
+        <div class="cab-bezel">
+          <div class="cab-screen">
+            🃏
+            <div class="cab-screen-glow"></div>
+            <div class="cab-badge">05</div>
+          </div>
+        </div>
+        <div class="cab-controls">
+          <div class="cab-stick"></div>
+          <div class="cab-btns">
+            <div class="cab-btn" style="background:#9b5de5"></div>
+            <div class="cab-btn" style="background:#7a3ab8"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cab-base"></div>
+      <div class="cab-feet"><div class="cab-foot"></div><div class="cab-foot"></div></div>
+      <div class="cab-label">MEMORY MATCH</div>
+    </a>
+
+    <!-- 6. WHACK-A-MOLE -->
+    <a class="cabinet" href="mole.html" style="--game-color:#fb8500">
+      <div class="cab-marquee">WHACK<br>A-MOLE</div>
+      <div class="cab-body">
+        <div class="cab-bezel">
+          <div class="cab-screen">
+            🔨
+            <div class="cab-screen-glow"></div>
+            <div class="cab-badge">06</div>
+          </div>
+        </div>
+        <div class="cab-controls">
+          <div class="cab-stick"></div>
+          <div class="cab-btns">
+            <div class="cab-btn" style="background:#fb8500"></div>
+            <div class="cab-btn" style="background:#c86a00"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cab-base"></div>
+      <div class="cab-feet"><div class="cab-foot"></div><div class="cab-foot"></div></div>
+      <div class="cab-label">WHACK-A-MOLE</div>
+    </a>
+
+    <!-- 7. REACTION TEST -->
+    <a class="cabinet" href="reaction.html" style="--game-color:#4cc9f0">
+      <div class="cab-marquee">REACTION<br>TEST</div>
+      <div class="cab-body">
+        <div class="cab-bezel">
+          <div class="cab-screen">
+            ⚡
+            <div class="cab-screen-glow"></div>
+            <div class="cab-badge">07</div>
+          </div>
+        </div>
+        <div class="cab-controls">
+          <div class="cab-stick"></div>
+          <div class="cab-btns">
+            <div class="cab-btn" style="background:#4cc9f0"></div>
+            <div class="cab-btn" style="background:#2a9fc0"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cab-base"></div>
+      <div class="cab-feet"><div class="cab-foot"></div><div class="cab-foot"></div></div>
+      <div class="cab-label">REACTION TEST</div>
+    </a>
+
+    <!-- 8. ASTEROIDS -->
+    <a class="cabinet" href="asteroids.html" style="--game-color:#00f5d4">
+      <div class="cab-marquee">ASTEROIDS</div>
+      <div class="cab-body">
+        <div class="cab-bezel">
+          <div class="cab-screen">🌑<div class="cab-screen-glow"></div><div class="cab-badge">08</div></div>
+        </div>
+        <div class="cab-controls">
+          <div class="cab-stick"></div>
+          <div class="cab-btns"><div class="cab-btn" style="background:#00f5d4"></div><div class="cab-btn" style="background:#f9c74f"></div></div>
+        </div>
+      </div>
+      <div class="cab-base"></div>
+      <div class="cab-feet"><div class="cab-foot"></div><div class="cab-foot"></div></div>
+      <div class="cab-label">ASTEROIDS</div>
+    </a>
+
+    <!-- 9. FLAPPY -->
+    <a class="cabinet" href="flappy.html" style="--game-color:#f9c74f">
+      <div class="cab-marquee">FLAPPY BIRD</div>
+      <div class="cab-body">
+        <div class="cab-bezel">
+          <div class="cab-screen">🐦<div class="cab-screen-glow"></div><div class="cab-badge">09</div></div>
+        </div>
+        <div class="cab-controls">
+          <div class="cab-stick"></div>
+          <div class="cab-btns"><div class="cab-btn" style="background:#f9c74f"></div></div>
+        </div>
+      </div>
+      <div class="cab-base"></div>
+      <div class="cab-feet"><div class="cab-foot"></div><div class="cab-foot"></div></div>
+      <div class="cab-label">FLAPPY BIRD</div>
+    </a>
+
+    <!-- 10. TYPE RUSH -->
+    <a class="cabinet" href="typerace.html" style="--game-color:#f72585">
+      <div class="cab-marquee">TYPE RUSH</div>
+      <div class="cab-body">
+        <div class="cab-bezel">
+          <div class="cab-screen">⌨️<div class="cab-screen-glow"></div><div class="cab-badge">10</div></div>
+        </div>
+        <div class="cab-controls">
+          <div class="cab-stick"></div>
+          <div class="cab-btns"><div class="cab-btn" style="background:#f72585"></div><div class="cab-btn" style="background:#c41a6a"></div></div>
+        </div>
+      </div>
+      <div class="cab-base"></div>
+      <div class="cab-feet"><div class="cab-foot"></div><div class="cab-foot"></div></div>
+      <div class="cab-label">TYPE RUSH</div>
+    </a>
+
+    <!-- 11. STROOP -->
+    <a class="cabinet" href="stroop.html" style="--game-color:#9b5de5">
+      <div class="cab-marquee">STROOP TEST</div>
+      <div class="cab-body">
+        <div class="cab-bezel">
+          <div class="cab-screen">🎨<div class="cab-screen-glow"></div><div class="cab-badge">11</div></div>
+        </div>
+        <div class="cab-controls">
+          <div class="cab-stick"></div>
+          <div class="cab-btns"><div class="cab-btn" style="background:#9b5de5"></div><div class="cab-btn" style="background:#7a3ab8"></div></div>
+        </div>
+      </div>
+      <div class="cab-base"></div>
+      <div class="cab-feet"><div class="cab-foot"></div><div class="cab-foot"></div></div>
+      <div class="cab-label">STROOP TEST</div>
+    </a>
+
+    <!-- 12. DODGE -->
+    <a class="cabinet" href="dodge.html" style="--game-color:#06d6a0">
+      <div class="cab-marquee">DODGE BLASTER</div>
+      <div class="cab-body">
+        <div class="cab-bezel">
+          <div class="cab-screen">🚀<div class="cab-screen-glow"></div><div class="cab-badge">12</div></div>
+        </div>
+        <div class="cab-controls">
+          <div class="cab-stick"></div>
+          <div class="cab-btns"><div class="cab-btn" style="background:#06d6a0"></div></div>
+        </div>
+      </div>
+      <div class="cab-base"></div>
+      <div class="cab-feet"><div class="cab-foot"></div><div class="cab-foot"></div></div>
+      <div class="cab-label">DODGE BLASTER</div>
+    </a>
+
+    <!-- 13. TIC-TAC-TOE -->
+    <a class="cabinet" href="tictactoe.html" style="--game-color:#fb8500">
+      <div class="cab-marquee">TIC-TAC-TOE</div>
+      <div class="cab-body">
+        <div class="cab-bezel">
+          <div class="cab-screen">✖️<div class="cab-screen-glow"></div><div class="cab-badge">13</div></div>
+        </div>
+        <div class="cab-controls">
+          <div class="cab-stick"></div>
+          <div class="cab-btns"><div class="cab-btn" style="background:#fb8500"></div><div class="cab-btn" style="background:#c86a00"></div></div>
+        </div>
+      </div>
+      <div class="cab-base"></div>
+      <div class="cab-feet"><div class="cab-foot"></div><div class="cab-foot"></div></div>
+      <div class="cab-label">TIC-TAC-TOE</div>
+    </a>
+
+  </div>
+
+  <div class="status-bar">
+    ▼ &nbsp; 13 MACHINES AVAILABLE &nbsp; ▼
+    <br><br>
+    <a href="leaderboard.html" style="font-family:'Press Start 2P',monospace;font-size:9px;color:#f9c74f;text-decoration:none;letter-spacing:2px;border:1px solid #f9c74f;padding:10px 20px;display:inline-block;transition:all .2s;box-shadow:0 0 10px rgba(249,199,79,.2)">🏆 VIEW LEADERBOARD</a>
+  </div>
+</div>
+
+</body>
+</html>

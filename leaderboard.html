@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leaderboard — Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#07070f;--border:#1e1e3a;--cyan:#00f5d4;--magenta:#f72585;--yellow:#f9c74f;--purple:#9b5de5;--green:#06d6a0;--orange:#fb8500;--blue:#4cc9f0;--text:#e8e8ff;--muted:#5050a0}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,245,212,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,212,.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+    body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px);pointer-events:none}
+    .page{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:36px 20px 80px}
+    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:40px;flex-wrap:wrap;gap:12px}
+    .back-btn{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-decoration:none;letter-spacing:1px;transition:color .2s}
+    .back-btn:hover{color:var(--cyan)}
+    .back-btn::before{content:'◄ '}
+    .nav-right{display:flex;align-items:center;gap:16px}
+    .nav-tag{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--cyan);opacity:.5}
+
+    /* Connection badge */
+    .conn-badge{display:flex;align-items:center;gap:7px;font-family:'Press Start 2P',monospace;font-size:7px;letter-spacing:1px;padding:6px 12px;border:1px solid var(--border)}
+    .conn-dot{width:7px;height:7px;border-radius:50%;background:#3a3a70;flex-shrink:0;transition:background .4s}
+    .conn-badge.online .conn-dot{background:var(--green);box-shadow:0 0 6px var(--green)}
+    .conn-badge.online .conn-txt{color:var(--green)}
+    .conn-badge.offline .conn-dot{background:var(--magenta)}
+    .conn-badge.offline .conn-txt{color:var(--magenta)}
+    .conn-badge.loading .conn-dot{background:var(--yellow);animation:pulse .6s ease infinite alternate}
+    .conn-badge.loading .conn-txt{color:var(--yellow)}
+    @keyframes pulse{from{opacity:.4}to{opacity:1}}
+
+    .header{text-align:center;margin-bottom:48px}
+    .trophy{font-size:40px;margin-bottom:14px}
+    h1{font-family:'Press Start 2P',monospace;font-size:clamp(16px,4vw,28px);letter-spacing:4px;background:linear-gradient(135deg,var(--yellow),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 16px rgba(249,199,79,.4));margin-bottom:10px}
+    .sub{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);letter-spacing:3px}
+    .action-row{display:flex;gap:12px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+    .action-btn{font-family:'Press Start 2P',monospace;font-size:7px;padding:8px 14px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;letter-spacing:1px;transition:all .2s}
+    .action-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+    .action-btn.danger:hover{border-color:var(--magenta);color:var(--magenta)}
+
+    .lb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:20px}
+
+    .game-card{background:#08081a;border:1px solid var(--border);padding:22px 18px;position:relative}
+    .gc-header{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+    .gc-icon{font-size:22px}
+    .gc-title{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--gc-color);letter-spacing:1px;line-height:1.8;text-shadow:0 0 10px var(--gc-color)}
+    .gc-count{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);margin-left:auto;white-space:nowrap}
+
+    .lb-row{display:flex;align-items:center;padding:6px 0;border-bottom:1px solid #0e0e22;gap:6px}
+    .lb-rank{font-family:'Press Start 2P',monospace;font-size:7px;width:24px;color:var(--muted);flex-shrink:0}
+    .lb-rank.top{color:var(--yellow)}
+    .lb-init{font-family:'Press Start 2P',monospace;font-size:8px;width:40px;color:var(--gc-color);flex-shrink:0;letter-spacing:2px}
+    .lb-sc{font-family:'Press Start 2P',monospace;font-size:8px;flex:1;text-align:right;color:var(--text)}
+    .lb-date{font-family:'Press Start 2P',monospace;font-size:6px;color:#2a2a50;width:44px;text-align:right;flex-shrink:0}
+    .lb-empty{font-family:'Press Start 2P',monospace;font-size:8px;color:#2a2a50;text-align:center;padding:20px 0;letter-spacing:2px}
+    .lb-loading{font-family:'Press Start 2P',monospace;font-size:7px;color:#3a3a70;text-align:center;padding:16px 0;letter-spacing:2px;animation:pulse .8s ease infinite alternate}
+    .formula{font-size:10px;color:var(--muted);margin-top:10px;line-height:1.7;border-top:1px solid var(--border);padding-top:10px;font-weight:300}
+
+    /* Confirm dialog */
+    #confirm-overlay{display:none;position:fixed;inset:0;background:rgba(7,7,15,.95);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:20px}
+    #confirm-overlay.show{display:flex}
+    .co-title{font-family:'Press Start 2P',monospace;font-size:14px;color:var(--magenta);letter-spacing:2px}
+    .co-sub{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-align:center;line-height:2.2;letter-spacing:1px}
+    .co-btns{display:flex;gap:12px}
+    .co-btn{font-family:'Press Start 2P',monospace;font-size:9px;padding:12px 22px;border:none;cursor:pointer;letter-spacing:1px;transition:box-shadow .2s}
+    .co-btn.danger{background:var(--magenta);color:#fff;box-shadow:0 0 12px rgba(247,37,133,.3)}
+    .co-btn.danger:hover{box-shadow:0 0 28px var(--magenta)}
+    .co-btn.cancel{background:transparent;color:var(--muted);border:1px solid var(--border)}
+    .co-btn.cancel:hover{color:var(--text);border-color:var(--text)}
+  </style>
+</head>
+<body>
+<div class="page">
+  <nav class="nav">
+    <a class="back-btn" href="arcade.html">ARCADE</a>
+    <div class="nav-right">
+      <div class="conn-badge loading" id="conn-badge">
+        <div class="conn-dot"></div>
+        <span class="conn-txt" id="conn-txt">CONNECTING...</span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="header">
+    <div class="trophy">🏆</div>
+    <h1>LEADERBOARD</h1>
+    <p class="sub" id="lb-sub">LOADING SCORES...</p>
+    <div class="action-row">
+      <button class="action-btn" id="refresh-btn">↺ REFRESH</button>
+      <button class="action-btn danger" id="clear-btn">⚠ CLEAR LOCAL SCORES</button>
+    </div>
+  </div>
+
+  <div class="lb-grid" id="lb-grid"></div>
+</div>
+
+<!-- Confirm dialog -->
+<div id="confirm-overlay">
+  <div class="co-title">CLEAR LOCAL SCORES?</div>
+  <div class="co-sub">THIS ONLY CLEARS SCORES SAVED IN<br>YOUR BROWSER. GLOBAL SCORES ON<br>FIREBASE ARE NOT AFFECTED.</div>
+  <div class="co-btns">
+    <button class="co-btn danger" id="confirm-yes">CLEAR</button>
+    <button class="co-btn cancel" id="confirm-no">CANCEL</button>
+  </div>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+const GAMES = [
+  { id:'sound_memory',  title:'SOUND\nMEMORY',   icon:'🎵', color:'#f72585', formula:'Score = rounds cleared × 100' },
+  { id:'jigsaw_puzzle', title:'JIGSAW\nPUZZLE',   icon:'🧩', color:'#00f5d4', formula:'Score = 10000 ÷ (moves×60% + time×40%) × difficulty multiplier' },
+  { id:'snake',         title:'SNAKE\nCLASSIC',   icon:'🐍', color:'#06d6a0', formula:'Score = food eaten × (10 + level bonus)' },
+  { id:'breakout',      title:'BRICK\nBREAKER',   icon:'🏓', color:'#f9c74f', formula:'Score = bricks broken × level multiplier' },
+  { id:'memory_match',  title:'MEMORY\nMATCH',    icon:'🃏', color:'#9b5de5', formula:'Score = pairs × 1200 ÷ (flips×55% + time×45%)' },
+  { id:'whack_mole',    title:'WHACK\nA-MOLE',    icon:'🔨', color:'#fb8500', formula:'Score = moles hit in 30 seconds' },
+  { id:'reaction',      title:'REACTION\nTEST',   icon:'⚡', color:'#4cc9f0', formula:'Score = 50000 ÷ avg reaction time (ms)' },
+  { id:'asteroids',     title:'ASTEROIDS',         icon:'🌑', color:'#00f5d4', formula:'Score = asteroids destroyed × wave multiplier' },
+  { id:'flappy',        title:'FLAPPY\nBIRD',      icon:'🐦', color:'#f9c74f', formula:'Score = pipes passed' },
+  { id:'typerace',      title:'TYPE\nRUSH',        icon:'⌨️', color:'#f72585', formula:'Score = WPM × accuracy%' },
+  { id:'stroop',        title:'STROOP\nTEST',      icon:'🎨', color:'#9b5de5', formula:'Score = correct × 100 ÷ (time×50% + errors×50%)' },
+  { id:'dodge',         title:'DODGE\nBLASTER',   icon:'🚀', color:'#06d6a0', formula:'Score = survival time × level bonus' },
+  { id:'tictactoe',     title:'TIC-TAC\nTOE',      icon:'✖️', color:'#fb8500', formula:'Score = wins × 100 + speed bonus per win' },
+];
+
+function fmtDate(ts) {
+  const d = new Date(ts);
+  return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function renderCard(game, entries, loading) {
+  const titleLines = game.title.split('\n').join('<br>');
+  let rows = '';
+  if (loading) {
+    rows = '<div class="lb-loading">FETCHING...</div>';
+  } else if (!entries || !entries.length) {
+    rows = '<div class="lb-empty">NO SCORES YET</div>';
+  } else {
+    rows = entries.map((e, i) => `
+      <div class="lb-row">
+        <span class="lb-rank${i<3?' top':''}">${['🥇','🥈','🥉'][i]||(i+1)+'.'}</span>
+        <span class="lb-init">${(e.i||'???').trim()}</span>
+        <span class="lb-sc">${(e.s||0).toLocaleString()}</span>
+        <span class="lb-date">${fmtDate(e.d||0)}</span>
+      </div>`).join('');
+  }
+  return `
+    <div class="gc-header">
+      <span class="gc-icon">${game.icon}</span>
+      <span class="gc-title">${titleLines}</span>
+      <span class="gc-count">${loading ? '...' : (entries||[]).length + '/10'}</span>
+    </div>
+    ${rows}
+    <div class="formula">${game.formula}</div>`;
+}
+
+function buildGrid(loadingAll) {
+  const grid = document.getElementById('lb-grid');
+  grid.innerHTML = '';
+  GAMES.forEach(game => {
+    const card = document.createElement('div');
+    card.className = 'game-card';
+    card.style.setProperty('--gc-color', game.color);
+    card.id = 'card-' + game.id;
+    card.innerHTML = renderCard(game, [], loadingAll);
+    grid.appendChild(card);
+  });
+}
+
+async function loadAll() {
+  const badge = document.getElementById('conn-badge');
+  const connTxt = document.getElementById('conn-txt');
+  badge.className = 'conn-badge loading';
+  connTxt.textContent = 'LOADING...';
+  document.getElementById('lb-sub').textContent = 'LOADING SCORES...';
+
+  buildGrid(true);
+
+  // Load each game in parallel
+  const results = await Promise.allSettled(
+    GAMES.map(game => LB.fetchEntries(game.id).then(r => ({ game, ...r })))
+  );
+
+  let anyOnline = false;
+  results.forEach(res => {
+    if (res.status !== 'fulfilled') return;
+    const { game, entries, online } = res.value;
+    if (online) anyOnline = true;
+    const card = document.getElementById('card-' + game.id);
+    if (card) card.innerHTML = renderCard(game, entries, false);
+  });
+
+  if (LB.FB_ON) {
+    if (anyOnline) {
+      badge.className = 'conn-badge online';
+      connTxt.textContent = 'GLOBAL SCORES';
+      document.getElementById('lb-sub').textContent = 'LIVE FROM FIREBASE — TOP 10 PER GAME';
+    } else {
+      badge.className = 'conn-badge offline';
+      connTxt.textContent = 'OFFLINE — LOCAL SCORES';
+      document.getElementById('lb-sub').textContent = 'SHOWING LOCAL SCORES — FIREBASE UNREACHABLE';
+    }
+  } else {
+    badge.className = 'conn-badge offline';
+    connTxt.textContent = 'LOCAL ONLY';
+    document.getElementById('lb-sub').textContent = 'LOCAL SCORES ONLY — FIREBASE NOT CONFIGURED';
+  }
+}
+
+// Refresh button
+document.getElementById('refresh-btn').addEventListener('click', loadAll);
+
+// Clear local scores
+document.getElementById('clear-btn').addEventListener('click', () => {
+  document.getElementById('confirm-overlay').classList.add('show');
+});
+document.getElementById('confirm-no').addEventListener('click', () => {
+  document.getElementById('confirm-overlay').classList.remove('show');
+});
+document.getElementById('confirm-yes').addEventListener('click', () => {
+  localStorage.removeItem('wandererArcadeLB_v1');
+  document.getElementById('confirm-overlay').classList.remove('show');
+  loadAll();
+});
+
+loadAll();
+</script>
+</body>
+</html>

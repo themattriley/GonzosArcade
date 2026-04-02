@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Flappy Bird — Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#07070f;--border:#1e1e3a;--yellow:#f9c74f;--magenta:#f72585;--cyan:#00f5d4;--green:#06d6a0;--text:#e8e8ff;--muted:#6060a0}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+    .page{position:relative;z-index:1;width:100%;max-width:420px;padding:24px 16px 20px;display:flex;flex-direction:column;align-items:center;gap:14px}
+    .nav{width:100%;display:flex;align-items:center;justify-content:space-between}
+    .back-btn{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-decoration:none;letter-spacing:1px;transition:color .2s}
+    .back-btn:hover{color:var(--yellow)}
+    .back-btn::before{content:'◄ '}
+    .game-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--yellow);opacity:.6}
+    h1{font-family:'Press Start 2P',monospace;font-size:clamp(12px,3vw,20px);letter-spacing:3px;color:var(--yellow);text-shadow:0 0 16px rgba(249,199,79,.5)}
+    .stats{display:flex;gap:24px;justify-content:center}
+    .stat{text-align:center}
+    .stat-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:2px;margin-bottom:3px}
+    .stat-value{font-family:'Press Start 2P',monospace;font-size:14px;color:var(--yellow)}
+    .canvas-wrap{position:relative;border:2px solid var(--border);box-shadow:0 0 20px rgba(249,199,79,.08)}
+    #gc{display:block}
+    .overlay{position:absolute;inset:0;background:rgba(7,7,15,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+    .overlay.hidden{display:none}
+    .ov-title{font-family:'Press Start 2P',monospace;font-size:clamp(14px,4vw,22px);letter-spacing:2px;color:var(--yellow);text-shadow:0 0 20px var(--yellow);text-align:center}
+    .ov-sub{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-align:center;line-height:2.4}
+    .ov-btn{font-family:'Press Start 2P',monospace;font-size:9px;padding:12px 28px;border:none;cursor:pointer;letter-spacing:1px;background:var(--yellow);color:#000;box-shadow:0 0 16px rgba(249,199,79,.4);transition:box-shadow .2s}
+    .ov-btn:hover{box-shadow:0 0 32px var(--yellow)}
+  </style>
+</head>
+<body>
+<div class="page">
+  <nav class="nav">
+    <a class="back-btn" href="arcade.html">ARCADE</a>
+    <span class="game-label">GAME 09</span>
+  </nav>
+  <h1>FLAPPY BIRD</h1>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">SCORE</div><div class="stat-value" id="score">0</div></div>
+    <div class="stat"><div class="stat-label">BEST</div><div class="stat-value" id="best">0</div></div>
+  </div>
+  <div class="canvas-wrap">
+    <canvas id="gc"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="ov-title">FLAPPY BIRD</div>
+      <div class="ov-sub">TAP, CLICK OR PRESS SPACE<br>TO FLAP YOUR WINGS<br>DODGE THE PIPES!</div>
+      <button class="ov-btn" id="ov-start">▶ START</button>
+    </div>
+  </div>
+</div>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+const canvas=document.getElementById('gc'), ctx=canvas.getContext('2d');
+const W=Math.min(window.innerWidth-32,380), H=Math.min(window.innerHeight-220,520);
+canvas.width=W; canvas.height=H;
+
+let score=0, best=parseInt(localStorage.getItem('flappyBest')||'0'), rAF, phase='idle';
+document.getElementById('best').textContent=best;
+
+const BIRD_X=W*0.25, BIRD_R=14, GRAVITY=0.38, FLAP_FORCE=-7.2;
+const PIPE_W=52, GAP=W*0.38, PIPE_SPEED=2.6, PIPE_INTERVAL=90;
+
+let bird=null, pipes=[], frameCount=0, bgX=0;
+
+function initState(){
+  bird={y:H/2, vy:0, angle:0, alive:true, flapped:false};
+  pipes=[]; frameCount=0; score=0;
+  document.getElementById('score').textContent=0;
+}
+
+function flap(){
+  if(!bird.alive) return;
+  bird.vy=FLAP_FORCE;
+  bird.flapped=true;
+}
+
+function startGame(){
+  initState();
+  phase='playing';
+  document.getElementById('overlay').classList.add('hidden');
+  cancelAnimationFrame(rAF);
+  loop();
+}
+
+document.getElementById('ov-start').addEventListener('click',startGame);
+document.addEventListener('keydown',e=>{ if(e.code==='Space'){e.preventDefault(); if(phase==='playing') flap(); else if(phase==='idle') startGame(); }});
+canvas.addEventListener('click',()=>{ if(phase==='playing') flap(); else if(phase==='idle') startGame(); });
+canvas.addEventListener('touchstart',e=>{e.preventDefault(); if(phase==='playing') flap(); else if(phase==='idle') startGame();},{passive:false});
+
+function loop(){
+  rAF=requestAnimationFrame(loop);
+  if(phase==='playing') update();
+  draw();
+}
+
+function update(){
+  frameCount++;
+  bgX=(bgX-0.5+W)%W;
+
+  // Spawn pipes
+  if(frameCount%PIPE_INTERVAL===0){
+    const minY=80, maxY=H-GAP-80;
+    const topH=minY+Math.random()*(maxY-minY);
+    pipes.push({x:W, topH, scored:false});
+  }
+
+  // Bird physics
+  bird.vy+=GRAVITY;
+  bird.y+=bird.vy;
+  bird.angle=Math.min(Math.PI/3, Math.max(-Math.PI/4, bird.vy*0.06));
+
+  // Pipes
+  pipes.forEach(p=>{
+    p.x-=PIPE_SPEED;
+    if(!p.scored && p.x+PIPE_W < BIRD_X){
+      p.scored=true; score++;
+      document.getElementById('score').textContent=score;
+      if(score>best){best=score;localStorage.setItem('flappyBest',best);document.getElementById('best').textContent=best;}
+    }
+  });
+  pipes=pipes.filter(p=>p.x>-PIPE_W-10);
+
+  // Collision
+  if(bird.y-BIRD_R<0 || bird.y+BIRD_R>H){ die(); return; }
+  for(const p of pipes){
+    const bx=BIRD_X, by=bird.y, br=BIRD_R*0.8;
+    if(bx+br>p.x && bx-br<p.x+PIPE_W){
+      if(by-br<p.topH || by+br>p.topH+GAP){ die(); return; }
+    }
+  }
+}
+
+function die(){
+  phase='dead'; cancelAnimationFrame(rAF);
+  const showOverlay = () => {
+    const ov=document.getElementById('overlay');
+    ov.querySelector('.ov-title').textContent='GAME OVER';
+    ov.querySelector('.ov-title').style.color='var(--magenta)';
+    ov.querySelector('.ov-sub').innerHTML=`SCORE: ${score} &nbsp;·&nbsp; BEST: ${best}`;
+    ov.querySelector('.ov-btn').textContent='↺ RETRY';
+    ov.classList.remove('hidden');
+    ov.querySelector('.ov-btn').onclick=startGame;
+    phase='idle';
+  };
+  if(typeof LB !== 'undefined'){
+    LB.submit('flappy', score, `SCORE: ${score} PIPES`, showOverlay);
+  } else {
+    showOverlay();
+  }
+}
+
+function draw(){
+  // Sky gradient
+  const sky=ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#050510'); sky.addColorStop(1,'#0a0a1e');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+
+  // Scrolling stars
+  ctx.fillStyle='rgba(255,255,255,0.25)';
+  for(let i=0;i<30;i++){
+    const sx=(i*173.3+bgX*0.5)%W, sy=(i*97.1)%H;
+    ctx.fillRect(sx,sy,1,1);
+  }
+
+  if(!bird) return; // nothing to draw before first game
+
+  // Pipes
+  pipes.forEach(p=>{
+    const grad=ctx.createLinearGradient(p.x,0,p.x+PIPE_W,0);
+    grad.addColorStop(0,'#1a4a1a'); grad.addColorStop(0.4,'#2a6a2a'); grad.addColorStop(1,'#0a2a0a');
+    ctx.fillStyle=grad;
+    ctx.fillRect(p.x,0,PIPE_W,p.topH);
+    ctx.fillStyle='#2a7a2a';
+    ctx.fillRect(p.x-4,p.topH-16,PIPE_W+8,16);
+    ctx.fillStyle=grad;
+    ctx.fillRect(p.x,p.topH+GAP,PIPE_W,H-p.topH-GAP);
+    ctx.fillStyle='#2a7a2a';
+    ctx.fillRect(p.x-4,p.topH+GAP,PIPE_W+8,16);
+    ctx.strokeStyle='rgba(6,214,160,0.2)'; ctx.lineWidth=1;
+    ctx.strokeRect(p.x,0,PIPE_W,p.topH);
+    ctx.strokeRect(p.x,p.topH+GAP,PIPE_W,H-p.topH-GAP);
+  });
+
+  // Bird
+  ctx.save();
+  ctx.translate(BIRD_X, bird.y);
+  ctx.rotate(bird.angle);
+  ctx.shadowBlur=12; ctx.shadowColor='#f9c74f';
+  ctx.fillStyle='#f9c74f';
+  ctx.beginPath(); ctx.ellipse(0,0,BIRD_R,BIRD_R*0.8,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#e07820';
+  ctx.beginPath(); ctx.ellipse(-4, BIRD_R*0.3, BIRD_R*0.5, BIRD_R*0.3, -0.4, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(6,-3,4,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(7,-3,2,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#e05000';
+  ctx.beginPath(); ctx.moveTo(BIRD_R,0); ctx.lineTo(BIRD_R+8,3); ctx.lineTo(BIRD_R,4); ctx.closePath(); ctx.fill();
+  ctx.shadowBlur=0; ctx.restore();
+
+  // Ground
+  ctx.fillStyle='#1a1a0a';
+  ctx.fillRect(0,H-4,W,4);
+}
+
+draw();
+</script>
+</body>
+</html>

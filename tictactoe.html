@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tic-Tac-Toe — Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#07070f;--border:#1e1e3a;--orange:#fb8500;--magenta:#f72585;--yellow:#f9c74f;--cyan:#00f5d4;--green:#06d6a0;--text:#e8e8ff;--muted:#6060a0}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(251,133,0,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(251,133,0,.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+    .page{position:relative;z-index:1;width:100%;max-width:480px;padding:28px 16px 40px;display:flex;flex-direction:column;align-items:center;gap:20px}
+    .nav{width:100%;display:flex;align-items:center;justify-content:space-between}
+    .back-btn{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-decoration:none;letter-spacing:1px;transition:color .2s}
+    .back-btn:hover{color:var(--orange)}
+    .back-btn::before{content:'◄ '}
+    .game-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--orange);opacity:.6}
+    h1{font-family:'Press Start 2P',monospace;font-size:clamp(12px,3vw,20px);letter-spacing:3px;color:var(--orange);text-shadow:0 0 16px rgba(251,133,0,.5)}
+    /* Difficulty */
+    .diff-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+    .diff-btn{font-family:'Press Start 2P',monospace;font-size:8px;padding:8px 12px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;letter-spacing:1px;transition:all .15s}
+    .diff-btn:hover{border-color:var(--orange);color:var(--orange)}
+    .diff-btn.active{border-color:var(--orange);color:#000;background:var(--orange);box-shadow:0 0 12px var(--orange)}
+    /* Stats */
+    .stats{display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
+    .stat{text-align:center}
+    .stat-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:2px;margin-bottom:3px}
+    .stat-value{font-family:'Press Start 2P',monospace;font-size:14px;color:var(--orange)}
+    .stat-value.g{color:var(--green)}
+    .stat-value.r{color:var(--magenta)}
+    /* Status */
+    #status{font-family:'Press Start 2P',monospace;font-size:9px;letter-spacing:2px;text-align:center;min-height:22px;color:var(--text)}
+    #status.you{color:var(--cyan)}
+    #status.ai{color:var(--orange)}
+    #status.win{color:var(--green);animation:glow .6s ease infinite alternate}
+    #status.draw{color:var(--yellow)}
+    #status.lose{color:var(--magenta)}
+    @keyframes glow{from{text-shadow:0 0 6px currentColor}to{text-shadow:0 0 20px currentColor}}
+    /* Board */
+    #board{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(340px,90vw)}
+    .cell{aspect-ratio:1;background:#0a0a1e;border:2px solid #2a2a50;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:clamp(28px,8vw,48px);transition:background .15s,border-color .15s;position:relative;overflow:hidden}
+    .cell:hover:not(.taken){background:#12122a;border-color:var(--orange)}
+    .cell.taken{cursor:default}
+    .cell.x-cell{color:var(--cyan);text-shadow:0 0 16px var(--cyan)}
+    .cell.o-cell{color:var(--orange);text-shadow:0 0 16px var(--orange)}
+    .cell.win-cell{background:#0e1a0e;border-color:var(--green);animation:win-pulse .5s ease infinite alternate}
+    @keyframes win-pulse{from{box-shadow:none}to{box-shadow:inset 0 0 20px rgba(6,214,160,.2)}}
+    /* Buttons */
+    .action-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+    .action-btn{font-family:'Press Start 2P',monospace;font-size:8px;padding:11px 20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;letter-spacing:1px;transition:all .15s}
+    .action-btn:hover{border-color:var(--orange);color:var(--orange)}
+    .action-btn.primary{background:var(--orange);color:#000;border-color:var(--orange);box-shadow:0 0 12px rgba(251,133,0,.3)}
+    /* Record */
+    .record-row{display:flex;gap:20px;justify-content:center;font-family:'Press Start 2P',monospace;font-size:8px}
+    .rec{text-align:center}
+    .rec-val{font-size:12px;margin-top:4px}
+    .rec-val.w{color:var(--green)} .rec-val.d{color:var(--yellow)} .rec-val.l{color:var(--magenta)}
+  </style>
+</head>
+<body>
+<div class="page">
+  <nav class="nav">
+    <a class="back-btn" href="arcade.html">ARCADE</a>
+    <span class="game-label">GAME 13</span>
+  </nav>
+  <h1>TIC-TAC-TOE</h1>
+  <div class="diff-row">
+    <button class="diff-btn" data-diff="easy">EASY</button>
+    <button class="diff-btn active" data-diff="medium">MEDIUM</button>
+    <button class="diff-btn" data-diff="hard">HARD (AI)</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">STREAK</div><div class="stat-value" id="streak">0</div></div>
+    <div class="stat"><div class="stat-label">BEST STREAK</div><div class="stat-value g" id="best-streak">0</div></div>
+    <div class="stat"><div class="stat-label">SCORE</div><div class="stat-value" id="score">0</div></div>
+  </div>
+  <div class="record-row">
+    <div class="rec"><div>WIN</div><div class="rec-val w" id="wins">0</div></div>
+    <div class="rec"><div>DRAW</div><div class="rec-val d" id="draws">0</div></div>
+    <div class="rec"><div>LOSS</div><div class="rec-val l" id="losses">0</div></div>
+  </div>
+  <div id="status" class="you">YOUR TURN (X)</div>
+  <div id="board"></div>
+  <div class="action-row">
+    <button class="action-btn primary" id="new-game-btn">▶ NEW GAME</button>
+    <button class="action-btn" id="lb-btn">🏆 SCORES</button>
+  </div>
+</div>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+let board=Array(9).fill(null), gameOver=false, playerTurn=true;
+let wins=0, draws=0, losses=0, streak=0, score=0;
+let bestStreak=parseInt(localStorage.getItem('tttBest')||'0');
+let difficulty='medium', turnCount=0;
+
+document.getElementById('best-streak').textContent=bestStreak;
+
+document.querySelectorAll('.diff-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.diff-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); difficulty=b.dataset.diff; newGame();
+  });
+});
+
+function winLines(){ return [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; }
+
+function checkWinner(b){
+  for(const [a,c,d] of winLines()){
+    if(b[a]&&b[a]===b[c]&&b[a]===b[d]) return {winner:b[a],line:[a,c,d]};
+  }
+  if(b.every(c=>c)) return {winner:'draw'};
+  return null;
+}
+
+// Minimax with depth limit for difficulty
+function minimax(b, depth, isMax, alpha, beta, maxDepth){
+  const res=checkWinner(b);
+  if(res){ if(res.winner==='O') return 10-depth; if(res.winner==='X') return depth-10; return 0; }
+  if(depth>=maxDepth) return 0;
+  const moves=b.map((v,i)=>v?null:i).filter(i=>i!==null);
+  if(isMax){
+    let best=-Infinity;
+    for(const m of moves){
+      b[m]='O'; best=Math.max(best,minimax(b,depth+1,false,alpha,beta,maxDepth)); b[m]=null;
+      alpha=Math.max(alpha,best); if(beta<=alpha) break;
+    }
+    return best;
+  } else {
+    let best=Infinity;
+    for(const m of moves){
+      b[m]='X'; best=Math.min(best,minimax(b,depth+1,true,alpha,beta,maxDepth)); b[m]=null;
+      beta=Math.min(beta,best); if(beta<=alpha) break;
+    }
+    return best;
+  }
+}
+
+function getAIMove(){
+  const maxDepth = difficulty==='easy'?1:difficulty==='medium'?3:9;
+  // Easy: 40% chance random move
+  const empties=board.map((v,i)=>v?null:i).filter(i=>i!==null);
+  if(difficulty==='easy'&&Math.random()<0.5) return empties[Math.floor(Math.random()*empties.length)];
+  let best=-Infinity, bestMove=empties[0];
+  for(const m of empties){
+    board[m]='O';
+    const val=minimax(board,0,false,-Infinity,Infinity,maxDepth);
+    board[m]=null;
+    if(val>best){best=val;bestMove=m;}
+  }
+  return bestMove;
+}
+
+function renderBoard(){
+  const el=document.getElementById('board');
+  el.innerHTML='';
+  board.forEach((val,i)=>{
+    const cell=document.createElement('div');
+    cell.className='cell'+(val?' taken':'')+(val==='X'?' x-cell':val==='O'?' o-cell':'');
+    cell.textContent=val||'';
+    cell.dataset.i=i;
+    if(!val&&!gameOver&&playerTurn) cell.addEventListener('click',()=>onCellClick(i));
+    el.appendChild(cell);
+  });
+}
+
+function onCellClick(i){
+  if(board[i]||gameOver||!playerTurn) return;
+  board[i]='X'; turnCount++;
+  renderBoard(); checkEnd();
+  if(!gameOver){ playerTurn=false; setStatus('AI THINKING...','ai'); setTimeout(aiMove,400); }
+}
+
+function aiMove(){
+  if(gameOver) return;
+  const m=getAIMove();
+  if(m===undefined) return;
+  board[m]='O'; turnCount++;
+  renderBoard(); checkEnd();
+  if(!gameOver){ playerTurn=true; setStatus('YOUR TURN (X)','you'); }
+}
+
+function checkEnd(){
+  const res=checkWinner(board);
+  if(!res) return;
+  gameOver=true;
+  if(res.winner==='draw'){
+    draws++; document.getElementById('draws').textContent=draws;
+    streak=0;
+    setStatus('DRAW!','draw');
+    updateScore(0);
+  } else if(res.winner==='X'){
+    // Highlight win line
+    res.line.forEach(i=>document.getElementById('board').children[i].classList.add('win-cell'));
+    wins++; document.getElementById('wins').textContent=wins;
+    streak++;
+    if(streak>bestStreak){bestStreak=streak;localStorage.setItem('tttBest',bestStreak);document.getElementById('best-streak').textContent=bestStreak;}
+    document.getElementById('streak').textContent=streak;
+    setStatus('YOU WIN! 🎉','win');
+    const bonus=Math.max(0,10-turnCount)*5;
+    updateScore(100+bonus);
+  } else {
+    losses++; document.getElementById('losses').textContent=losses;
+    streak=0; document.getElementById('streak').textContent=0;
+    setStatus('AI WINS...','lose');
+    updateScore(-10);
+  }
+}
+
+function updateScore(delta){
+  score=Math.max(0,score+delta);
+  document.getElementById('score').textContent=score;
+}
+
+function setStatus(msg,cls){ const el=document.getElementById('status'); el.textContent=msg; el.className=cls||''; }
+
+function newGame(){
+  board=Array(9).fill(null); gameOver=false; playerTurn=true; turnCount=0;
+  renderBoard(); setStatus('YOUR TURN (X)','you');
+}
+
+document.getElementById('new-game-btn').addEventListener('click',newGame);
+document.getElementById('lb-btn').addEventListener('click',()=>{
+  if(typeof LB === 'undefined') return;
+  if(score > 0){
+    LB.submit('tictactoe', score, `SCORE: ${score} &nbsp;·&nbsp; STREAK: ${streak}`, ()=>{});
+  } else {
+    LB.show('tictactoe', 'TIC-TAC-TOE');
+  }
+});
+
+newGame();
+</script>
+</body>
+</html>

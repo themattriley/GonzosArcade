@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stroop Test — Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#07070f;--border:#1e1e3a;--purple:#9b5de5;--magenta:#f72585;--yellow:#f9c74f;--cyan:#00f5d4;--text:#e8e8ff;--muted:#6060a0}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(155,93,229,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(155,93,229,.025) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+    .page{position:relative;z-index:1;width:100%;max-width:540px;padding:28px 16px 40px;display:flex;flex-direction:column;align-items:center;gap:18px}
+    .nav{width:100%;display:flex;align-items:center;justify-content:space-between}
+    .back-btn{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-decoration:none;letter-spacing:1px;transition:color .2s}
+    .back-btn:hover{color:var(--purple)}
+    .back-btn::before{content:'◄ '}
+    .game-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--purple);opacity:.6}
+    h1{font-family:'Press Start 2P',monospace;font-size:clamp(12px,3vw,20px);letter-spacing:3px;color:var(--purple);text-shadow:0 0 16px rgba(155,93,229,.5)}
+    .stats{display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
+    .stat{text-align:center}
+    .stat-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:2px;margin-bottom:3px}
+    .stat-value{font-family:'Press Start 2P',monospace;font-size:14px;color:var(--purple)}
+    .stat-value.y{color:var(--yellow)}
+    .stat-value.r{color:var(--magenta)}
+    /* Timer bar */
+    .timer-bar-wrap{width:100%;max-width:480px;height:6px;background:var(--border)}
+    #timer-bar{height:100%;background:var(--purple);box-shadow:0 0 6px var(--purple);transition:width .15s linear}
+    /* Word display */
+    .word-arena{width:100%;max-width:480px;height:160px;background:#06061a;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;position:relative}
+    #stroop-word{font-family:'Press Start 2P',monospace;font-size:clamp(22px,6vw,40px);letter-spacing:3px;transition:opacity .12s}
+    #stroop-word.flash{opacity:0}
+    .feedback{position:absolute;top:12px;right:16px;font-family:'Press Start 2P',monospace;font-size:10px;opacity:0;transition:opacity .1s}
+    .feedback.show{opacity:1}
+    .feedback.correct{color:var(--cyan)}
+    .feedback.wrong{color:var(--magenta)}
+    /* Instruction */
+    .instruction{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;text-align:center;line-height:2;padding:10px 16px;border:1px solid var(--border)}
+    /* Color buttons */
+    .color-btns{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;width:100%;max-width:480px}
+    .color-btn{padding:18px 10px;font-family:'Press Start 2P',monospace;font-size:10px;letter-spacing:1px;border:none;cursor:pointer;transition:transform .1s,box-shadow .15s,filter .1s;filter:brightness(.8)}
+    .color-btn:hover{filter:brightness(1);transform:translateY(-2px)}
+    .color-btn:active{transform:translateY(1px)}
+    .color-btn.correct-flash{filter:brightness(1.4);box-shadow:0 0 30px var(--btn-glow)!important}
+    .color-btn.wrong-flash{filter:brightness(.5)}
+    /* Overlay */
+    .overlay{position:fixed;inset:0;background:rgba(7,7,15,.93);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+    .overlay.hidden{display:none}
+    .ov-title{font-family:'Press Start 2P',monospace;font-size:clamp(14px,4vw,24px);letter-spacing:2px;color:var(--purple);text-shadow:0 0 20px var(--purple)}
+    .ov-sub{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-align:center;line-height:2.4}
+    .ov-btn{font-family:'Press Start 2P',monospace;font-size:10px;padding:14px 32px;border:none;cursor:pointer;letter-spacing:1px;background:var(--purple);color:#fff;box-shadow:0 0 20px var(--purple);transition:box-shadow .2s}
+    .ov-btn:hover{box-shadow:0 0 40px var(--purple)}
+  </style>
+</head>
+<body>
+<div class="page">
+  <nav class="nav">
+    <a class="back-btn" href="arcade.html">ARCADE</a>
+    <span class="game-label">GAME 11</span>
+  </nav>
+  <h1>STROOP TEST</h1>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">SCORE</div><div class="stat-value" id="score">0</div></div>
+    <div class="stat"><div class="stat-label">STREAK</div><div class="stat-value y" id="streak">0</div></div>
+    <div class="stat"><div class="stat-label">WRONG</div><div class="stat-value r" id="wrongs">0</div></div>
+    <div class="stat"><div class="stat-label">TIME</div><div class="stat-value" id="time-disp">45</div></div>
+  </div>
+  <div class="timer-bar-wrap"><div id="timer-bar" style="width:100%"></div></div>
+  <div class="instruction" id="instruction">TAP THE COLOR THE WORD IS WRITTEN IN<br>(NOT WHAT THE WORD SAYS)</div>
+  <div class="word-arena">
+    <span id="stroop-word">—</span>
+    <span class="feedback" id="feedback">+10</span>
+  </div>
+  <div class="color-btns" id="color-btns"></div>
+</div>
+<div class="overlay" id="overlay">
+  <div class="ov-title">STROOP TEST</div>
+  <div class="ov-sub">A WORD WILL APPEAR IN A COLOR<br>TAP THE COLOR THE WORD IS<br><b style="color:#9b5de5">WRITTEN IN</b> — NOT WHAT IT SAYS<br><br>EXAMPLE: &nbsp;<span style="color:#f9c74f;font-family:'Press Start 2P',monospace;font-size:9px">RED</span> → TAP YELLOW</div>
+  <button class="ov-btn" id="ov-btn">▶ START</button>
+</div>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+  // LB safety shim - no-op if leaderboard.js failed to load
+  if(typeof LB === 'undefined') window.LB = { submit:(_g,_s,_l,cb)=>{ if(cb) cb(); }, show:()=>{}, puzzleScore:()=>0, memoryScore:()=>0, reactionScore:()=>0 };
+
+const COLORS=[
+  {name:'RED',   hex:'#ef233c', glow:'#ef233c'},
+  {name:'BLUE',  hex:'#4cc9f0', glow:'#4cc9f0'},
+  {name:'GREEN', hex:'#06d6a0', glow:'#06d6a0'},
+  {name:'YELLOW',hex:'#f9c74f', glow:'#f9c74f'},
+  {name:'PINK',  hex:'#f72585', glow:'#f72585'},
+  {name:'CYAN',  hex:'#00f5d4', glow:'#00f5d4'},
+];
+
+const TOTAL_TIME=45;
+let score=0, streak=0, wrongs=0, timeLeft=TOTAL_TIME, running=false, timerInt;
+let currentWord, currentColor, canAnswer=true;
+
+// Build buttons
+const btnsWrap=document.getElementById('color-btns');
+COLORS.forEach(c=>{
+  const btn=document.createElement('button');
+  btn.className='color-btn';
+  btn.style.background=c.hex; btn.style.color='#000'; btn.style.setProperty('--btn-glow',c.glow);
+  btn.style.boxShadow=`0 0 10px ${c.hex}44`;
+  btn.dataset.name=c.name;
+  btn.textContent=c.name;
+  btn.addEventListener('click',()=>onAnswer(c.name));
+  btnsWrap.appendChild(btn);
+});
+
+function showWord(){
+  // Word text = random color name, written in a DIFFERENT color
+  const textColorObj=COLORS[Math.floor(Math.random()*COLORS.length)];
+  let inkColorObj;
+  do{ inkColorObj=COLORS[Math.floor(Math.random()*COLORS.length)]; }
+  while(inkColorObj.name===textColorObj.name);
+  currentWord=textColorObj.name;
+  currentColor=inkColorObj.name;
+  const el=document.getElementById('stroop-word');
+  el.classList.add('flash');
+  setTimeout(()=>{
+    el.textContent=currentWord;
+    el.style.color=inkColorObj.hex;
+    el.style.textShadow=`0 0 16px ${inkColorObj.hex}`;
+    el.classList.remove('flash');
+    canAnswer=true;
+  },120);
+}
+
+function onAnswer(colorName){
+  if(!running||!canAnswer) return;
+  canAnswer=false;
+  const correct=colorName===currentColor;
+  const fb=document.getElementById('feedback');
+  if(correct){
+    streak++;
+    const bonus=Math.min(5,Math.floor(streak/3));
+    const pts=10+bonus*5;
+    score+=pts;
+    document.getElementById('score').textContent=score;
+    document.getElementById('streak').textContent=streak;
+    fb.textContent=`+${pts}`;
+    fb.className='feedback show correct';
+    flashBtn(colorName,true);
+  } else {
+    wrongs++;
+    streak=0;
+    document.getElementById('wrongs').textContent=wrongs;
+    document.getElementById('streak').textContent=0;
+    fb.textContent='✗';
+    fb.className='feedback show wrong';
+    flashBtn(colorName,false);
+    flashBtn(currentColor,true);
+  }
+  setTimeout(()=>fb.classList.remove('show'),500);
+  setTimeout(()=>showWord(), 380);
+}
+
+function flashBtn(name, correct){
+  const btn=[...btnsWrap.children].find(b=>b.dataset.name===name);
+  if(!btn) return;
+  btn.classList.add(correct?'correct-flash':'wrong-flash');
+  setTimeout(()=>btn.classList.remove('correct-flash','wrong-flash'),350);
+}
+
+function startGame(){
+  document.getElementById('overlay').classList.add('hidden');
+  score=0; streak=0; wrongs=0; timeLeft=TOTAL_TIME; running=true; canAnswer=true;
+  ['score','streak','wrongs'].forEach(id=>document.getElementById(id).textContent=0);
+  document.getElementById('time-disp').textContent=TOTAL_TIME;
+  document.getElementById('timer-bar').style.width='100%';
+  document.getElementById('timer-bar').style.background='var(--purple)';
+  clearInterval(timerInt);
+  timerInt=setInterval(()=>{
+    timeLeft--;
+    document.getElementById('time-disp').textContent=timeLeft;
+    const pct=timeLeft/TOTAL_TIME*100;
+    document.getElementById('timer-bar').style.width=pct+'%';
+    if(pct<30) document.getElementById('timer-bar').style.background='var(--magenta)';
+    if(timeLeft<=0) endGame();
+  },1000);
+  showWord();
+}
+
+function endGame(){
+  running=false; clearInterval(timerInt);
+  const lbScore=Math.max(0,Math.round(score*(1-wrongs*0.05)));
+  LB.submit('stroop',lbScore,`SCORE: ${score} &nbsp;·&nbsp; STREAK: ${streak}`,()=>{
+    const ov=document.getElementById('overlay');
+    ov.querySelector('.ov-title').textContent='TIME\'S UP!';
+    ov.querySelector('.ov-title').style.color='var(--purple)';
+    ov.querySelector('.ov-sub').innerHTML=`SCORE: ${score} &nbsp;·&nbsp; WRONG: ${wrongs}<br>BEST STREAK: ${streak}`;
+    ov.querySelector('.ov-btn').textContent='▶ PLAY AGAIN';
+    ov.classList.remove('hidden');
+  });
+}
+
+document.getElementById('ov-btn').addEventListener('click',startGame);
+</script>
+</body>
+</html>

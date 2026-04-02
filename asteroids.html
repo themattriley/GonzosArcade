@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Asteroids — Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#03030c;--border:#1e1e3a;--cyan:#00f5d4;--magenta:#f72585;--yellow:#f9c74f;--text:#e8e8ff;--muted:#6060a0}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+    .page{position:relative;z-index:1;width:100%;max-width:640px;padding:24px 16px 20px;display:flex;flex-direction:column;align-items:center;gap:14px}
+    .nav{width:100%;display:flex;align-items:center;justify-content:space-between}
+    .back-btn{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-decoration:none;letter-spacing:1px;transition:color .2s}
+    .back-btn:hover{color:var(--cyan)}
+    .back-btn::before{content:'◄ '}
+    .game-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--cyan);opacity:.6}
+    h1{font-family:'Press Start 2P',monospace;font-size:clamp(12px,3vw,20px);letter-spacing:3px;color:var(--cyan);text-shadow:0 0 16px rgba(0,245,212,.5)}
+    .stats{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
+    .stat{text-align:center}
+    .stat-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:2px;margin-bottom:3px}
+    .stat-value{font-family:'Press Start 2P',monospace;font-size:13px;color:var(--cyan)}
+    .stat-value.y{color:var(--yellow)}
+    .canvas-wrap{position:relative;border:1px solid #1a1a3a}
+    #gc{display:block;background:#03030c}
+    .overlay{position:absolute;inset:0;background:rgba(3,3,12,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+    .overlay.hidden{display:none}
+    .ov-title{font-family:'Press Start 2P',monospace;font-size:clamp(14px,3vw,22px);letter-spacing:2px;color:var(--cyan);text-align:center;line-height:1.8}
+    .ov-sub{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-align:center;line-height:2.4}
+    .ov-btn{font-family:'Press Start 2P',monospace;font-size:9px;padding:12px 28px;border:none;cursor:pointer;letter-spacing:1px;background:var(--cyan);color:#000;box-shadow:0 0 16px rgba(0,245,212,.4);transition:box-shadow .2s}
+    .ov-btn:hover{box-shadow:0 0 32px var(--cyan)}
+    /* Mobile controls */
+    .mobile-controls{display:none;gap:0;flex-direction:column;align-items:center;margin-top:8px}
+    @media(max-width:600px){.mobile-controls{display:flex}}
+    .mc-row{display:flex;gap:8px}
+    .mc-btn{width:56px;height:56px;background:#0e0e22;border:1px solid #2a2a50;color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:4px;user-select:none;-webkit-user-select:none;transition:background .1s}
+    .mc-btn:active{background:#1e1e44}
+    .lives-row{display:flex;gap:6px;align-items:center;min-height:18px}
+    .life-pip{font-size:14px}
+  </style>
+</head>
+<body>
+<div class="page">
+  <nav class="nav">
+    <a class="back-btn" href="arcade.html">ARCADE</a>
+    <span class="game-label">GAME 08</span>
+  </nav>
+  <h1>ASTEROIDS</h1>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">SCORE</div><div class="stat-value" id="score">0</div></div>
+    <div class="stat"><div class="stat-label">WAVE</div><div class="stat-value y" id="wave">1</div></div>
+    <div class="stat"><div class="stat-label">BEST</div><div class="stat-value y" id="best">0</div></div>
+  </div>
+  <div class="lives-row" id="lives-row"></div>
+  <div class="canvas-wrap" id="cwrap">
+    <canvas id="gc"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="ov-title">ASTEROIDS</div>
+      <div class="ov-sub">ARROWS / WASD — ROTATE &amp; THRUST<br>SPACE — SHOOT<br>DESTROY ALL ASTEROIDS TO ADVANCE</div>
+      <button class="ov-btn" id="ov-start">▶ START</button>
+    </div>
+  </div>
+  <div class="mobile-controls">
+    <div class="mc-row"><button class="mc-btn" id="mc-thrust">▲</button></div>
+    <div class="mc-row">
+      <button class="mc-btn" id="mc-left">↺</button>
+      <button class="mc-btn" id="mc-shoot">💥</button>
+      <button class="mc-btn" id="mc-right">↻</button>
+    </div>
+  </div>
+</div>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+const canvas=document.getElementById('gc'), ctx=canvas.getContext('2d');
+const W=Math.min(window.innerWidth-32,580), H=Math.min(window.innerHeight-260,520);
+canvas.width=W; canvas.height=H;
+
+let score=0, wave=1, lives=3, rAF, running=false;
+let best=parseInt(localStorage.getItem('asteroidsBest')||'0');
+document.getElementById('best').textContent=best;
+
+// ── ENTITIES ──
+let ship=null, bullets=[], asteroids=[], particles=[], invincible=0;
+let shootCooldown=0;
+
+const SHIP_SIZE=14, BULLET_SPEED=7, BULLET_LIFE=55, TURN_SPEED=0.055, THRUST=0.12, FRICTION=0.98;
+
+function initShip(){
+  return {x:W/2,y:H/2,vx:0,vy:0,angle:-Math.PI/2,thrusting:false,alive:true};
+}
+
+function spawnAsteroids(n, exclude){
+  const arr=[];
+  for(let i=0;i<n;i++){
+    let x,y;
+    do{ x=Math.random()*W; y=Math.random()*H; }
+    while(exclude && Math.hypot(x-exclude.x,y-exclude.y)<120);
+    const spd=0.8+Math.random()*0.8+wave*0.12;
+    const ang=Math.random()*Math.PI*2;
+    arr.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,r:38+Math.random()*14,pts:generatePts(9),rot:0,rotSpd:(Math.random()-.5)*.02});
+  }
+  return arr;
+}
+
+function generatePts(n){
+  return Array.from({length:n},(_,i)=>{
+    const a=i/n*Math.PI*2, r=0.75+Math.random()*0.5;
+    return [Math.cos(a)*r, Math.sin(a)*r];
+  });
+}
+
+function splitAsteroid(ast){
+  if(ast.r<18) return [];
+  return [0,1].map(()=>{
+    const spd=1.2+Math.random()*0.8+wave*.1;
+    const ang=Math.random()*Math.PI*2;
+    return {x:ast.x,y:ast.y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,r:ast.r*0.52,pts:generatePts(7),rot:0,rotSpd:(Math.random()-.5)*.04};
+  });
+}
+
+function startGame(){
+  score=0; wave=1; lives=3; running=true;
+  ship=initShip(); bullets=[]; asteroids=spawnAsteroids(4+wave,ship); particles=[];
+  invincible=120;
+  document.getElementById('score').textContent=0;
+  document.getElementById('wave').textContent=1;
+  renderLives();
+  document.getElementById('overlay').classList.add('hidden');
+  cancelAnimationFrame(rAF);
+  loop();
+}
+
+function renderLives(){
+  document.getElementById('lives-row').innerHTML=Array(lives).fill('<span class="life-pip">△</span>').join('');
+}
+
+// ── KEYS ──
+const keys={};
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(e.code==='Space'){e.preventDefault(); fireBullet();}
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+
+// Mobile
+let mc={thrust:false,left:false,right:false};
+function mcBtn(id,prop){ const b=document.getElementById(id); ['touchstart','mousedown'].forEach(ev=>b.addEventListener(ev,e=>{e.preventDefault();mc[prop]=true;},{passive:false})); ['touchend','mouseup'].forEach(ev=>b.addEventListener(ev,()=>mc[prop]=false)); }
+mcBtn('mc-thrust','thrust'); mcBtn('mc-left','left'); mcBtn('mc-right','right');
+document.getElementById('mc-shoot').addEventListener('touchstart',e=>{e.preventDefault();fireBullet();},{passive:false});
+document.getElementById('mc-shoot').addEventListener('mousedown',()=>fireBullet());
+
+let shootCooldown=0;
+function fireBullet(){
+  if(!running||!ship.alive||shootCooldown>0) return;
+  bullets.push({x:ship.x+Math.cos(ship.angle)*SHIP_SIZE,y:ship.y+Math.sin(ship.angle)*SHIP_SIZE,vx:Math.cos(ship.angle)*BULLET_SPEED+ship.vx*0.3,vy:Math.sin(ship.angle)*BULLET_SPEED+ship.vy*0.3,life:BULLET_LIFE});
+  shootCooldown=8;
+}
+
+// ── LOOP ──
+function loop(){
+  rAF=requestAnimationFrame(loop);
+  update(); draw();
+}
+
+function update(){
+  if(!running) return;
+  if(shootCooldown>0) shootCooldown--;
+  if(invincible>0) invincible--;
+
+  const left  = keys['ArrowLeft']||keys['KeyA']||mc.left;
+  const right = keys['ArrowRight']||keys['KeyD']||mc.right;
+  const thrust = keys['ArrowUp']||keys['KeyW']||mc.thrust;
+
+  if(ship.alive){
+    if(left)  ship.angle -= TURN_SPEED;
+    if(right) ship.angle += TURN_SPEED;
+    if(thrust){ ship.vx+=Math.cos(ship.angle)*THRUST; ship.vy+=Math.sin(ship.angle)*THRUST; ship.thrusting=true; }
+    else ship.thrusting=false;
+    ship.vx*=FRICTION; ship.vy*=FRICTION;
+    ship.x=(ship.x+ship.vx+W)%W; ship.y=(ship.y+ship.vy+H)%H;
+  }
+
+  // Bullets
+  bullets=bullets.filter(b=>{
+    b.x=(b.x+b.vx+W)%W; b.y=(b.y+b.vy+H)%H; b.life--;
+    return b.life>0;
+  });
+
+  // Asteroids
+  asteroids.forEach(a=>{ a.x=(a.x+a.vx+W)%W; a.y=(a.y+a.vy+H)%H; a.rot+=a.rotSpd; });
+
+  // Particles
+  particles=particles.filter(p=>{ p.x+=p.vx; p.y+=p.vy; p.life--; return p.life>0; });
+
+  // Bullet-asteroid collision
+  const newAsts=[];
+  bullets.forEach(b=>{
+    asteroids.forEach(a=>{
+      if(a.hit) return;
+      if(Math.hypot(b.x-a.x,b.y-a.y)<a.r){ a.hit=true; b.life=0; score+=a.r>30?20:a.r>18?50:100; document.getElementById('score').textContent=score; if(score>best){best=score;localStorage.setItem('asteroidsBest',best);document.getElementById('best').textContent=best;} explode(a); newAsts.push(...splitAsteroid(a)); }
+    });
+  });
+  asteroids=[...asteroids.filter(a=>!a.hit),...newAsts];
+
+  // Ship-asteroid collision
+  if(ship.alive && invincible===0){
+    asteroids.forEach(a=>{
+      if(Math.hypot(ship.x-a.x,ship.y-a.y)<a.r+SHIP_SIZE*.7){ killShip(); }
+    });
+  }
+
+  // Wave clear
+  if(asteroids.length===0){ wave++; document.getElementById('wave').textContent=wave; asteroids=spawnAsteroids(3+wave*2,ship); ship=initShip(); invincible=120; }
+}
+
+function explode(a){
+  for(let i=0;i<12;i++) particles.push({x:a.x,y:a.y,vx:(Math.random()-.5)*3,vy:(Math.random()-.5)*3,life:30+Math.random()*20,color:['#00f5d4','#f72585','#f9c74f'][Math.floor(Math.random()*3)]});
+}
+
+function killShip(){
+  explode({x:ship.x,y:ship.y,r:0});
+  lives--;
+  renderLives();
+  if(lives<=0){ gameOver(); return; }
+  ship=initShip(); invincible=180;
+}
+
+function gameOver(){
+  running=false; cancelAnimationFrame(rAF);
+  const showOverlay = () => {
+    const ov=document.getElementById('overlay');
+    ov.querySelector('.ov-title').textContent='GAME OVER';
+    ov.querySelector('.ov-title').style.color='var(--magenta)';
+    ov.querySelector('.ov-sub').innerHTML=`SCORE: ${score} &nbsp;·&nbsp; WAVE: ${wave}`;
+    ov.querySelector('.ov-btn').textContent='↺ RETRY';
+    ov.classList.remove('hidden');
+  };
+  if(typeof LB !== 'undefined'){
+    LB.submit('asteroids', score, `SCORE: ${score} &nbsp;·&nbsp; WAVE: ${wave}`, showOverlay);
+  } else {
+    showOverlay();
+  }
+}
+
+// ── DRAW ──
+function draw(){
+  ctx.fillStyle='#03030c'; ctx.fillRect(0,0,W,H);
+
+  // Stars
+  ctx.fillStyle='rgba(255,255,255,0.3)';
+  for(let i=0;i<60;i++){
+    const sx=(i*137.5+13)%W, sy=(i*97.3+7)%H;
+    ctx.fillRect(sx,sy,1,1);
+  }
+
+  if(!running && !ship) return; // nothing to draw before first game
+
+  // Particles
+  particles.forEach(p=>{
+    ctx.globalAlpha=p.life/50;
+    ctx.fillStyle=p.color;
+    ctx.fillRect(p.x-1,p.y-1,2,2);
+  });
+  ctx.globalAlpha=1;
+
+  // Asteroids
+  asteroids.forEach(a=>{
+    ctx.save(); ctx.translate(a.x,a.y); ctx.rotate(a.rot);
+    ctx.strokeStyle='rgba(0,245,212,0.7)'; ctx.lineWidth=1.5;
+    ctx.shadowBlur=6; ctx.shadowColor='#00f5d4';
+    ctx.beginPath();
+    a.pts.forEach(([px,py],i)=>{ i===0?ctx.moveTo(px*a.r,py*a.r):ctx.lineTo(px*a.r,py*a.r); });
+    ctx.closePath(); ctx.stroke();
+    ctx.shadowBlur=0; ctx.restore();
+  });
+
+  // Bullets
+  ctx.fillStyle='#f9c74f'; ctx.shadowBlur=8; ctx.shadowColor='#f9c74f';
+  bullets.forEach(b=>{ ctx.beginPath(); ctx.arc(b.x,b.y,2.5,0,Math.PI*2); ctx.fill(); });
+  ctx.shadowBlur=0;
+
+  // Ship
+  if(ship && ship.alive && (invincible===0||Math.floor(invincible/6)%2===0)){
+    ctx.save(); ctx.translate(ship.x,ship.y); ctx.rotate(ship.angle);
+    ctx.shadowBlur=10; ctx.shadowColor='#00f5d4';
+    ctx.strokeStyle='#00f5d4'; ctx.lineWidth=1.8;
+    ctx.beginPath();
+    ctx.moveTo(SHIP_SIZE,0); ctx.lineTo(-SHIP_SIZE*.7, SHIP_SIZE*.6); ctx.lineTo(-SHIP_SIZE*.4,0); ctx.lineTo(-SHIP_SIZE*.7,-SHIP_SIZE*.6); ctx.closePath();
+    ctx.stroke();
+    if(ship.thrusting){
+      ctx.strokeStyle='#f72585'; ctx.shadowColor='#f72585'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(-SHIP_SIZE*.4,0); ctx.lineTo(-SHIP_SIZE*(1.2+Math.random()*.4),0); ctx.stroke();
+    }
+    ctx.shadowBlur=0; ctx.restore();
+  }
+}
+
+document.getElementById('ov-start').addEventListener('click', startGame);
+draw();
+</script>
+</body>
+</html>
