@@ -289,8 +289,8 @@
     function draw(){ ctx.clearRect(0,0,canvas.width,canvas.height); P.forEach(p=>{p.tiltAngle+=p.tiltSpeed;p.y+=p.d;p.tilt=Math.sin(p.tiltAngle)*12;ctx.beginPath();ctx.lineWidth=p.r;ctx.strokeStyle=p.color;ctx.moveTo(p.x+p.tilt+p.r/2,p.y);ctx.lineTo(p.x+p.tilt,p.y+p.tilt+p.r/2);ctx.stroke();if(p.y>canvas.height)p.y=-10;}); if(++frame<260)requestAnimationFrame(draw); else ctx.clearRect(0,0,canvas.width,canvas.height); }
     draw();
   }
+</script>
 <script src="firebase-config.js"></script>
 <script src="leaderboard.js"></script>
-</script>
 </body>
 </html>
