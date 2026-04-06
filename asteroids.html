@@ -237,7 +237,7 @@ function gameOver(){
     ov.querySelector('.ov-btn').textContent='↺ RETRY';
     ov.classList.remove('hidden');
   };
-  if(typeof LB !== 'undefined'){
+  if(score > 0 && typeof LB !== 'undefined'){
     LB.submit('asteroids', score, `SCORE: ${score} &nbsp;·&nbsp; WAVE: ${wave}`, showOverlay);
   } else {
     showOverlay();

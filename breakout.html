@@ -202,24 +202,41 @@ function gameOver(won) {
   cancelAnimationFrame(rAF);
   if (score > best) { best = score; localStorage.setItem('breakoutBest', best); document.getElementById('best').textContent = best; }
   const nextLv = level + 1;
-  if (score > 0) {
-    LB.submit('breakout', score, `SCORE: ${score} &nbsp;·&nbsp; LEVEL ${level}`, () => {
-      overlay.classList.remove('hidden');
-      overlay.querySelector('.ov-title').textContent = won ? `LEVEL ${level} CLEAR!` : 'GAME OVER';
-      overlay.querySelector('.ov-title').style.color = won ? 'var(--yellow)' : 'var(--magenta)';
-      overlay.querySelector('.ov-sub').innerHTML = won ? `SCORE: ${score}<br>${nextLv<=5?'NEXT LEVEL AWAITS':'YOU CLEARED ALL LEVELS!'}` : `SCORE: ${score}`;
-      const btns = won ? (nextLv<=5?`<button class="ov-btn primary" id="ov-next">▶ LEVEL ${nextLv}</button><button class="ov-btn secondary" id="ov-retry">RETRY L${level}</button>`:`<button class="ov-btn primary" id="ov-retry">↺ NEW GAME</button>`) : `<button class="ov-btn primary" id="ov-retry">↺ RETRY</button>`;
-      overlay.querySelector('.ov-btns').innerHTML = btns;
-      if (document.getElementById('ov-retry')) document.getElementById('ov-retry').addEventListener('click',()=>{lives=3;score=0;document.getElementById('score').textContent=0;renderLives();startGame(level);});
-      if (document.getElementById('ov-next')) document.getElementById('ov-next').addEventListener('click',()=>{lives=3;renderLives();startGame(nextLv);});
-    });
-  } else {
+  const isGameComplete = won && nextLv > 5; // all 5 levels beaten
+  const isGameOver = !won && lives <= 0;    // all lives gone
+
+  const showOverlay = () => {
     overlay.classList.remove('hidden');
-    overlay.querySelector('.ov-title').textContent = 'GAME OVER';
-    overlay.querySelector('.ov-title').style.color = 'var(--magenta)';
-    overlay.querySelector('.ov-sub').innerHTML = `SCORE: ${score}`;
-    overlay.querySelector('.ov-btns').innerHTML = `<button class="ov-btn primary" id="ov-retry">↺ RETRY</button>`;
-    document.getElementById('ov-retry').addEventListener('click',()=>{lives=3;score=0;document.getElementById('score').textContent=0;renderLives();startGame(1);});
+    overlay.querySelector('.ov-title').textContent = won ? `LEVEL ${level} CLEAR!` : 'GAME OVER';
+    overlay.querySelector('.ov-title').style.color = won ? 'var(--yellow)' : 'var(--magenta)';
+    overlay.querySelector('.ov-sub').innerHTML = won
+      ? `SCORE: ${score}<br>${nextLv <= 5 ? 'NEXT LEVEL AWAITS' : 'YOU CLEARED ALL LEVELS!'}`
+      : `SCORE: ${score}`;
+    const btns = won
+      ? (nextLv <= 5
+          ? `<button class="ov-btn primary" id="ov-next">▶ LEVEL ${nextLv}</button><button class="ov-btn secondary" id="ov-retry">RETRY L${level}</button>`
+          : `<button class="ov-btn primary" id="ov-new">▶ NEW GAME</button>`)
+      : `<button class="ov-btn primary" id="ov-retry">↺ RETRY</button>`;
+    overlay.querySelector('.ov-btns').innerHTML = btns;
+    // Next level — keep score running
+    if (document.getElementById('ov-next'))
+      document.getElementById('ov-next').addEventListener('click', () => { lives = 3; renderLives(); startGame(nextLv); });
+    // Retry current level after level clear — keep score running
+    if (won && document.getElementById('ov-retry'))
+      document.getElementById('ov-retry').addEventListener('click', () => { lives = 3; renderLives(); startGame(level); });
+    // Retry after game over — reset everything
+    if (!won && document.getElementById('ov-retry'))
+      document.getElementById('ov-retry').addEventListener('click', () => { lives = 3; score = 0; document.getElementById('score').textContent = 0; renderLives(); startGame(1); });
+    // New game — reset everything
+    if (document.getElementById('ov-new'))
+      document.getElementById('ov-new').addEventListener('click', () => { lives = 3; score = 0; document.getElementById('score').textContent = 0; renderLives(); startGame(1); });
+  };
+
+  // Only prompt for initials at true end points: all lives gone, or all 5 levels cleared
+  if ((isGameOver || isGameComplete) && score > 0) {
+    LB.submit('breakout', score, `SCORE: ${score} &nbsp;·&nbsp; LEVEL ${level}`, showOverlay);
+  } else {
+    showOverlay();
   }
 }
 

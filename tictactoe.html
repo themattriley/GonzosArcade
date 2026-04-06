@@ -84,7 +84,7 @@
   <div id="board"></div>
   <div class="action-row">
     <button class="action-btn primary" id="new-game-btn">▶ NEW GAME</button>
-    <button class="action-btn" id="lb-btn">🏆 SCORES</button>
+    <button class="action-btn" id="lb-btn">🏆 END SESSION</button>
   </div>
 </div>
 <script src="firebase-config.js"></script>
@@ -220,11 +220,21 @@ function newGame(){
   renderBoard(); setStatus('YOUR TURN (X)','you');
 }
 
-document.getElementById('new-game-btn').addEventListener('click',newGame);
-document.getElementById('lb-btn').addEventListener('click',()=>{
-  if(typeof LB === 'undefined') return;
-  if(score > 0){
-    LB.submit('tictactoe', score, `SCORE: ${score} &nbsp;·&nbsp; STREAK: ${streak}`, ()=>{});
+document.getElementById('new-game-btn').addEventListener('click', newGame);
+document.getElementById('lb-btn').addEventListener('click', () => {
+  if (typeof LB === 'undefined') return;
+  // Always just show the board — never prompt mid-session
+  if (score > 0) {
+    LB.submit('tictactoe', score, `SCORE: ${score} &nbsp;·&nbsp; STREAK: ${streak}`, () => {
+      // After submitting, reset for a new session
+      score = 0; wins = 0; draws = 0; losses = 0; streak = 0;
+      document.getElementById('score').textContent = 0;
+      document.getElementById('wins').textContent = 0;
+      document.getElementById('draws').textContent = 0;
+      document.getElementById('losses').textContent = 0;
+      document.getElementById('streak').textContent = 0;
+      newGame();
+    });
   } else {
     LB.show('tictactoe', 'TIC-TAC-TOE');
   }

@@ -210,6 +210,8 @@ function setupCanvas(lv) {
 }
 
 // ── GAME LOGIC ────────────────────────────────────────────────────────────
+let sessionActive = false; // true once player starts a fresh run
+
 function startGame() {
   overlay.classList.add('hidden');
   const lv = LEVELS[currentLevel];
@@ -220,8 +222,11 @@ function startGame() {
   const startY = Math.floor(lv.gridH / 2);
   snake = [{x:startX, y:startY}, {x:startX-1, y:startY}, {x:startX-2, y:startY}];
   dir = {x:1, y:0}; nextDir = {x:1, y:0};
-  score = 0; foodEaten = 0;
-  scoreEl.textContent = 0;
+  // Reset score only when starting a brand-new session (not continuing after a level clear)
+  if (!sessionActive) { score = 0; }
+  sessionActive = true;
+  foodEaten = 0;
+  scoreEl.textContent = score;
   foodLeftEl.textContent = lv.foodNeeded;
 
   obstacles = getObstacles(lv, lv.gridW, lv.gridH);
@@ -279,31 +284,24 @@ function spawnFood(lv) {
 
 function die(lv) {
   running = false; clearInterval(gameLoop);
+  sessionActive = false;
   wrap.className = 'canvas-wrap dead';
-  if (score > 0) {
-    const _showDie = () => {
-      ovTitle.style.color = 'var(--magenta)';
-      ovTitle.textContent = 'GAME OVER';
-      ovSub.innerHTML = `SCORE: ${score} &nbsp;·&nbsp; FOOD: ${foodEaten}/${lv.foodNeeded}`;
-      overlay.querySelector('.ov-btns').innerHTML = `
-        <button class="ov-btn primary" id="ov-retry">↺ RETRY</button>
-        <button class="ov-btn secondary" id="ov-menu">MENU</button>`;
-      document.getElementById('ov-retry').addEventListener('click', startGame);
-      document.getElementById('ov-menu').addEventListener('click', () => showIdleOverlay());
-      overlay.classList.remove('hidden');
-    };
-    if(typeof LB !== 'undefined') LB.submit('snake', score, `SCORE: ${score} &nbsp;·&nbsp; LEVEL ${lv.n}`, _showDie);
-    else _showDie();
-  } else {
+  const _showDie = () => {
     ovTitle.style.color = 'var(--magenta)';
     ovTitle.textContent = 'GAME OVER';
-    ovSub.innerHTML = `SCORE: ${score} &nbsp;·&nbsp; FOOD: ${foodEaten}/${lv.foodNeeded}`;
+    ovSub.innerHTML = `SCORE: ${score} &nbsp;·&nbsp; LEVEL ${lv.n}`;
     overlay.querySelector('.ov-btns').innerHTML = `
       <button class="ov-btn primary" id="ov-retry">↺ RETRY</button>
       <button class="ov-btn secondary" id="ov-menu">MENU</button>`;
-    document.getElementById('ov-retry').addEventListener('click', startGame);
-    document.getElementById('ov-menu').addEventListener('click', () => showIdleOverlay());
+    document.getElementById('ov-retry').addEventListener('click', () => { score = 0; sessionActive = false; startGame(); });
+    document.getElementById('ov-menu').addEventListener('click', () => { score = 0; showIdleOverlay(); });
     overlay.classList.remove('hidden');
+  };
+  if (score > 0) {
+    if (typeof LB !== 'undefined') LB.submit('snake', score, `SCORE: ${score} &nbsp;·&nbsp; LEVEL ${lv.n}`, _showDie);
+    else _showDie();
+  } else {
+    _showDie();
   }
 }
 
@@ -316,7 +314,9 @@ function levelComplete(lv) {
   }
   wrap.className = 'canvas-wrap win';
   const isLast = currentLevel === LEVELS.length - 1;
-  const _showWin = () => {
+  if (isLast) sessionActive = false;
+
+  const showWin = () => {
     ovTitle.style.color = 'var(--green)';
     ovTitle.textContent = isLast ? '🏆 ARCADE MASTER!' : `LEVEL ${lv.n} CLEAR!`;
     ovSub.innerHTML = `SCORE: ${score}<br>${isLast ? 'ALL LEVELS COMPLETE!' : 'NEXT LEVEL UNLOCKED'}`;
@@ -325,14 +325,21 @@ function levelComplete(lv) {
       ? `<button class="ov-btn primary" id="ov-replay">↺ REPLAY L10</button>`
       : `<button class="ov-btn primary" id="ov-next">▶ LEVEL ${lv.n+1}</button><button class="ov-btn secondary" id="ov-menu2">MENU</button>`;
     if (!isLast) {
+      // Continue run — advance level, keep score accumulating
       document.getElementById('ov-next').addEventListener('click', () => { selectLevel(nextIdx); startGame(); });
-      document.getElementById('ov-menu2').addEventListener('click', () => showIdleOverlay());
+      document.getElementById('ov-menu2').addEventListener('click', () => { score = 0; sessionActive = false; showIdleOverlay(); });
     } else {
-      document.getElementById('ov-replay').addEventListener('click', startGame);
+      document.getElementById('ov-replay').addEventListener('click', () => { score = 0; sessionActive = false; startGame(); });
     }
     overlay.classList.remove('hidden');
   };
-  LB.submit('snake', score, `SCORE: ${score} &nbsp;·&nbsp; LEVEL ${lv.n} CLEAR`, _showWin);
+
+  // Only submit to leaderboard on the final level or on death — not between levels
+  if (isLast && score > 0) {
+    LB.submit('snake', score, `SCORE: ${score} &nbsp;·&nbsp; ALL LEVELS CLEAR!`, showWin);
+  } else {
+    showWin();
+  }
 }
 
 // ── DRAW ──────────────────────────────────────────────────────────────────

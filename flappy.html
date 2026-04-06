@@ -145,7 +145,7 @@ function die(){
     ov.querySelector('.ov-btn').onclick=startGame;
     phase='idle';
   };
-  if(typeof LB !== 'undefined'){
+  if(score > 0 && typeof LB !== 'undefined'){
     LB.submit('flappy', score, `SCORE: ${score} PIPES`, showOverlay);
   } else {
     showOverlay();
