@@ -219,7 +219,8 @@ function endSession(){
   phase='idle';
   const valid=results.filter(r=>r<9999);
   const avg=valid.length?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length):0;
-  const lbScore = avg>0 ? LB.reactionScore(avg) : 0;
+  // Compute score directly — don't rely on LB utility which may be the shim
+  const lbScore = avg>0 ? Math.max(1, Math.round(50000/avg)) : 0;
   pad.className='result';
 
   // Show the score prominently on the pad
@@ -235,7 +236,8 @@ function endSession(){
   padSub.textContent='';
   roundEl.textContent='✓';
 
-  if(lbScore>0){
+  // Always show leaderboard when there are valid results — no lbScore>0 gate
+  if(valid.length > 0){
     LB.submit('reaction', lbScore, `AVG: ${avg}ms &nbsp;·&nbsp; SCORE: ${lbScore}`, ()=>{
       padSub.textContent='CLICK TO PLAY AGAIN';
     });
