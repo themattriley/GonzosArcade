@@ -131,9 +131,19 @@ function grade(ms){
 }
 
 pad.addEventListener('click', onClick);
-pad.addEventListener('touchstart', e=>{ e.preventDefault(); onClick(); }, {passive:false});
+pad.addEventListener('touchstart', e=>{
+  // Don't steal touches when the leaderboard modal is open
+  const overlay = document.getElementById('lb-overlay');
+  if (overlay && !overlay.classList.contains('hidden')) return;
+  e.preventDefault();
+  onClick();
+}, {passive:false});
 
 function onClick(){
+  // Ignore if leaderboard overlay is open
+  const overlay = document.getElementById('lb-overlay');
+  if (overlay && !overlay.classList.contains('hidden')) return;
+
   if(phase==='idle'){
     startSession();
   } else if(phase==='waiting'){
@@ -211,14 +221,20 @@ function endSession(){
   const avg=valid.length?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length):0;
   const lbScore = avg>0 ? LB.reactionScore(avg) : 0;
   pad.className='result';
-  reactionMs.style.display='none';
+
+  // Show the score prominently on the pad
+  reactionMs.style.display='block';
+  reactionMs.textContent = lbScore > 0 ? lbScore : '—';
+
   reactionGrd.style.display='block';
   const g=grade(avg);
   reactionGrd.style.color=g.color;
-  reactionGrd.textContent='SESSION COMPLETE';
-  padLabel.textContent=`AVG: ${avg}ms`;
+  reactionGrd.textContent= avg > 0 ? g.label : 'NO VALID ROUNDS';
+
+  padLabel.textContent = avg > 0 ? `AVG: ${avg}ms` : '';
   padSub.textContent='';
   roundEl.textContent='✓';
+
   if(lbScore>0){
     LB.submit('reaction', lbScore, `AVG: ${avg}ms &nbsp;·&nbsp; SCORE: ${lbScore}`, ()=>{
       padSub.textContent='CLICK TO PLAY AGAIN';

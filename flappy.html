@@ -88,7 +88,12 @@ function startGame(){
 document.getElementById('ov-start').addEventListener('click',startGame);
 document.addEventListener('keydown',e=>{ if(e.code==='Space'){e.preventDefault(); if(phase==='playing') flap(); else if(phase==='idle') startGame(); }});
 canvas.addEventListener('click',()=>{ if(phase==='playing') flap(); else if(phase==='idle') startGame(); });
-canvas.addEventListener('touchstart',e=>{e.preventDefault(); if(phase==='playing') flap(); else if(phase==='idle') startGame();},{passive:false});
+canvas.addEventListener('touchstart',e=>{
+  const overlay = document.getElementById('lb-overlay');
+  if(overlay && !overlay.classList.contains('hidden')) return;
+  e.preventDefault();
+  if(phase==='playing') flap(); else if(phase==='idle') startGame();
+},{passive:false});
 
 function loop(){
   rAF=requestAnimationFrame(loop);

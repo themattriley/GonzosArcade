@@ -109,7 +109,11 @@ for(let i=0;i<HOLES;i++){
   hole.className='hole'; hole.dataset.index=i;
   hole.innerHTML=`<div class="mole">${MOLE_EMOJIS[i%MOLE_EMOJIS.length]}</div>`;
   hole.addEventListener('click',()=>onHoleClick(i));
-  hole.addEventListener('touchstart',e=>{e.preventDefault();onHoleClick(i);},{passive:false});
+  hole.addEventListener('touchstart',e=>{
+    const overlay=document.getElementById('lb-overlay');
+    if(overlay&&!overlay.classList.contains('hidden')) return;
+    e.preventDefault();onHoleClick(i);
+  },{passive:false});
   grid.appendChild(hole);
 }
 
