@@ -11,12 +11,14 @@
 
   /* ── CSS ─────────────────────────────────────────────────────────────── */
   const css = `
-    #lb-overlay{position:fixed;inset:0;background:rgba(5,5,14,.97);z-index:9000;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 12px;box-sizing:border-box;font-family:'Press Start 2P',monospace}
+    #lb-overlay{position:fixed;inset:0;background:rgba(5,5,14,.97);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;font-family:'Press Start 2P',monospace}
     #lb-overlay.hidden{display:none}
-    #lb-modal{width:min(500px,100%);padding:28px 24px 24px;background:#0a0a1c;border:2px solid #00f5d4;box-shadow:0 0 40px rgba(0,245,212,.25);display:flex;flex-direction:column;gap:16px;flex-shrink:0}
-    #lb-modal h2{font-size:12px;letter-spacing:3px;color:#00f5d4;text-align:center;text-shadow:0 0 16px rgba(0,245,212,.5)}
-    #lb-score-line{font-size:9px;color:#f9c74f;text-align:center;letter-spacing:2px;line-height:2.2}
-    #lb-status-row{display:flex;align-items:center;justify-content:center;gap:8px;font-size:7px;letter-spacing:2px}
+    #lb-modal{width:min(500px,100%);max-height:calc(100vh - 32px);padding:24px 22px 20px;background:#0a0a1c;border:2px solid #00f5d4;box-shadow:0 0 40px rgba(0,245,212,.25);display:flex;flex-direction:column;gap:14px;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box}
+    #lb-modal::-webkit-scrollbar{width:4px}
+    #lb-modal::-webkit-scrollbar-thumb{background:#1e1e3a}
+    #lb-modal h2{font-size:12px;letter-spacing:3px;color:#00f5d4;text-align:center;text-shadow:0 0 16px rgba(0,245,212,.5);flex-shrink:0}
+    #lb-score-line{font-size:9px;color:#f9c74f;text-align:center;letter-spacing:2px;line-height:2.2;flex-shrink:0}
+    #lb-status-row{display:flex;align-items:center;justify-content:center;gap:8px;font-size:7px;letter-spacing:2px;flex-shrink:0}
     #lb-status-dot{width:7px;height:7px;border-radius:50%;background:#3a3a70;flex-shrink:0;transition:background .3s}
     #lb-status-dot.online{background:#06d6a0;box-shadow:0 0 6px #06d6a0}
     #lb-status-dot.saving{background:#f9c74f;animation:lb-pulse .5s ease infinite alternate}
@@ -26,16 +28,16 @@
     #lb-status-txt.saving{color:#f9c74f}
     #lb-status-txt.offline{color:#f72585}
     @keyframes lb-pulse{from{opacity:.5}to{opacity:1}}
-    #lb-initials-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+    #lb-initials-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;flex-shrink:0}
     #lb-initials-label{font-size:8px;color:#6060a0;letter-spacing:2px}
     #lb-initials-row{display:flex;gap:10px}
-    .lb-letter{width:52px;height:60px;font-family:'Press Start 2P',monospace;font-size:24px;text-align:center;background:#050510;border:2px solid #2a2a50;color:#e8e8ff;outline:none;text-transform:uppercase;caret-color:transparent;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;border-radius:0}
+    .lb-letter{width:52px;height:60px;font-family:'Press Start 2P',monospace;font-size:24px;text-align:center;background:#050510;border:2px solid #2a2a50;color:#e8e8ff;outline:none;text-transform:uppercase;caret-color:transparent;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;border-radius:0;touch-action:manipulation}
     .lb-letter:focus{border-color:#00f5d4;box-shadow:0 0 12px rgba(0,245,212,.3)}
-    #lb-save-btn{font-family:'Press Start 2P',monospace;font-size:10px;padding:14px 28px;border:none;cursor:pointer;letter-spacing:2px;background:#00f5d4;color:#050510;box-shadow:0 0 20px rgba(0,245,212,.4);transition:box-shadow .2s,opacity .2s;align-self:center}
+    #lb-save-btn{font-family:'Press Start 2P',monospace;font-size:10px;padding:14px 28px;border:none;cursor:pointer;letter-spacing:2px;background:#00f5d4;color:#050510;box-shadow:0 0 20px rgba(0,245,212,.4);transition:box-shadow .2s,opacity .2s;align-self:center;touch-action:manipulation}
     #lb-save-btn:hover:not(:disabled){box-shadow:0 0 40px rgba(0,245,212,.7)}
     #lb-save-btn:disabled{opacity:.35;cursor:not-allowed}
-    #lb-divider{height:1px;background:#1e1e3a}
-    #lb-table-wrap{max-height:200px;overflow-y:auto}
+    #lb-divider{height:1px;background:#1e1e3a;flex-shrink:0}
+    #lb-table-wrap{overflow-y:auto;max-height:180px;-webkit-overflow-scrolling:touch}
     #lb-table-wrap::-webkit-scrollbar{width:4px}
     #lb-table-wrap::-webkit-scrollbar-thumb{background:#1e1e3a}
     #lb-table-title{font-size:7px;color:#6060a0;letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
@@ -48,12 +50,12 @@
     .lb-date{width:60px;text-align:right;color:#3a3a70;font-size:6px}
     .lb-empty{font-size:8px;color:#3a3a70;text-align:center;padding:20px 0;letter-spacing:2px}
     .lb-loading{font-size:8px;color:#3a3a70;text-align:center;padding:16px 0;letter-spacing:2px;animation:lb-pulse .8s ease infinite alternate}
-    #lb-close-row{display:flex;justify-content:center;gap:12px}
-    .lb-close-btn{font-family:'Press Start 2P',monospace;font-size:8px;padding:10px 20px;cursor:pointer;letter-spacing:1px;transition:all .2s}
+    #lb-close-row{display:flex;justify-content:center;gap:12px;flex-shrink:0}
+    .lb-close-btn{font-family:'Press Start 2P',monospace;font-size:8px;padding:10px 20px;cursor:pointer;letter-spacing:1px;transition:all .2s;touch-action:manipulation}
     .lb-close-btn.primary{background:#00f5d4;color:#050510;border:none;box-shadow:0 0 12px rgba(0,245,212,.3)}
     .lb-close-btn.secondary{background:transparent;color:#6060a0;border:1px solid #1e1e3a}
     .lb-close-btn.secondary:hover{color:#e8e8ff;border-color:#e8e8ff}
-    #lb-offline-note{font-size:7px;color:#f72585;text-align:center;letter-spacing:1px;display:none}
+    #lb-offline-note{font-size:7px;color:#f72585;text-align:center;letter-spacing:1px;display:none;flex-shrink:0}
     #lb-offline-note.show{display:block}
   `;
   const styleEl = document.createElement('style');
@@ -282,7 +284,8 @@
       closeRow.innerHTML = '<button class="lb-close-btn secondary" id="lb-skip">SKIP</button>';
 
       overlay.classList.remove('hidden');
-      overlay.scrollTop = 0;
+      const modal = document.getElementById('lb-modal');
+      if (modal) modal.scrollTop = 0;
       setTimeout(() => document.getElementById('lb-l0')?.focus(), 80);
 
       // Save handler
