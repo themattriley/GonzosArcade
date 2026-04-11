@@ -89,17 +89,18 @@
     <button class="diff-btn" data-level="3" id="od-3">HARD</button>
   </div>
   <button class="ov-btn" id="ov-btn">▶ START</button>
+  <a id="ov-arcade-link" href="arcade.html" style="display:none;font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-decoration:none;letter-spacing:1px;margin-top:4px;transition:color .2s">◄ BACK TO ARCADE</a>
 </div>
 <script src="firebase-config.js"></script>
 <script src="leaderboard.js"></script>
 <script>
   // LB safety shim - no-op if leaderboard.js failed to load
-  if(typeof LB === 'undefined') window.LB = { submit:(_g,_s,_l,cb)=>{ if(cb) cb(); }, show:()=>{}, puzzleScore:()=>0, memoryScore:()=>0, reactionScore:()=>0 };
+  if(typeof LB==='undefined') window.LB={submit:(_g,_s,_l,cb)=>{if(cb)cb();},show:()=>{},fetchEntries:()=>Promise.resolve({entries:[],online:false}),FB_ON:false,puzzleScore:(m,s,c)=>Math.max(1,Math.round(10000/(m*.6+Math.max(1,s)*.4)*(c<=3?1:c<=5?2.5:5))),memoryScore:(p,f,s)=>Math.max(1,Math.round(p*1200/(f*.55+Math.max(1,s)*.45))),reactionScore:(a)=>Math.max(1,Math.round(50000/a))};
 
-const WORDS_EASY  =['cat','dog','sun','run','fly','hit','map','cup','key','fox','bit','log','win','zip','art','sky','gem','bug','hop','jet'];
-const WORDS_MED   =['pixel','storm','laser','magic','ghost','flame','sword','tower','brave','crisp','frost','blend','glare','kneel','print','shard','thorn','twist','vault','witch'];
-const WORDS_HARD  =['phantom','crystal','journey','kingdom','eclipse','curious','lantern','crimson','whisper','marshal','torpedo','triumph','balance','cascade','dynamic','glacier','horizon','pioneer','quantum','silence'];
-const WORDS_INSANE=['frequency','algorithm','adventure','mystical','labyrinth','forgotten','celestial','threshold','momentum','authentic','blizzard','framework','lightning','character','telescope','orchestra','rebellion','sanctuary','xenophobe','pneumatic'];
+const WORDS_EASY=['cat','dog','sun','run','fly','hit','map','cup','key','fox','bit','log','win','zip','art','sky','gem','bug','hop','jet','red','box','jam','ink','oak','tip','web','cub','dew','elk','fan','gap','hue','ivy','jab','keg','lip','mud','net','orb','paw','quiz','rod','sap','tan','urn','van','wax','yak','zap'];
+const WORDS_MED=['pixel','storm','laser','magic','ghost','flame','sword','tower','brave','crisp','frost','blend','glare','kneel','print','shard','thorn','twist','vault','witch','clamp','dread','ember','flint','graze','hatch','joust','knack','lunge','merge','noble','oxide','plume','quest','rivet','scout','smear','truce','ulcer','venom','waltz','xenon','yacht','zesty','anvil','broth','chasm','delta','epoch','fjord'];
+const WORDS_HARD=['phantom','crystal','journey','kingdom','eclipse','curious','lantern','crimson','whisper','marshal','torpedo','triumph','balance','cascade','dynamic','glacier','horizon','pioneer','quantum','silence','archival','blizzard','classify','deflect','embrace','furnace','gryphon','harbinger','isolate','javelin','kingdom','lacquer','mystique','nominal','obscure','pilgrim','quandary','rampant','solstice','tangent','uncanny','vagrant','warlock','xenolith','yielding','zealotry','abrasive','catapult','dispatch','ferocity'];
+const WORDS_INSANE=['frequency','algorithm','adventure','mystical','labyrinth','forgotten','celestial','threshold','momentum','authentic','blizzard','framework','lightning','character','telescope','orchestra','rebellion','sanctuary','xenophobe','pneumatic','aboriginal','catastrophe','differential','equilibrium','fluorescent','grandfather','hieroglyphic','imagination','juxtaposed','kaleidoscope','labyrinthine','metamorphic','nonchalant','orchestrate','phenomenal','quintessential','renaissance','surveillance','treacherous','unequivocal','virtuosity','whimsical','xylophone','yellowstone','zigzagging','acceleration','bibliography','circumnavigate','disillusion','electromagnetic'];
 
 const TOTAL_TIME=60;
 let level=2, running=false, score=0, lives=3, wordsTyped=0, timeLeft=TOTAL_TIME;
@@ -115,7 +116,7 @@ function setLevel(l, fromOverlay){
 }
 
 function getWordList(){ return level===1?WORDS_EASY:level===2?WORDS_MED:level===3?WORDS_HARD:WORDS_INSANE; }
-function getFallSpeed(){ return 0.4+level*0.25; }
+function getFallSpeed(){ return level===1 ? (0.4+1*0.25)*0.85 : 0.4+level*0.25; }
 function getSpawnInterval(){ return level===1?2200:level===2?1700:1300; }
 function getFieldW(){ return document.getElementById('word-field').clientWidth; }
 function getFieldH(){ return document.getElementById('word-field').clientHeight||300; }
@@ -169,7 +170,7 @@ function spawnWord(){
 }
 
 function animLoop(){
-  if(!running){ rAF=requestAnimationFrame(animLoop); return; }
+  if(!running){ return; }
   const fh=getFieldH();
   fallingWords.forEach(fw=>{
     fw.y+=fw.speed;
@@ -222,6 +223,7 @@ document.getElementById('clr-btn').addEventListener('click',()=>{ document.getEl
 
 function endGame(){
   running=false; clearInterval(timerInt); clearTimeout(spawnTimer); cancelAnimationFrame(rAF);
+  document.getElementById('word-input').blur();
   const elapsed=TOTAL_TIME-timeLeft||1;
   const wpm=Math.round(wordsTyped/(elapsed/60));
   const accuracy=wordsTyped>0?Math.min(100,Math.round(wordsTyped/(wordsTyped+(3-Math.max(0,lives)))*100)):0;
@@ -231,6 +233,7 @@ function endGame(){
     document.getElementById('ov-title').textContent='TIME\'S UP!';
     document.getElementById('ov-sub').innerHTML=`WORDS: ${wordsTyped} &nbsp;·&nbsp; WPM: ${wpm}<br>SCORE: ${score}`;
     document.getElementById('ov-btn').textContent='▶ PLAY AGAIN';
+    document.getElementById('ov-arcade-link').style.display='block';
     ov.classList.remove('hidden');
   });
 }
