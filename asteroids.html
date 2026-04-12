@@ -72,6 +72,7 @@
 <script src="firebase-config.js"></script>
 <script src="leaderboard.js"></script>
 <script>
+if(typeof LB==='undefined') window.LB={submit:(_g,_s,_l,cb)=>{if(cb)cb();},show:()=>{},fetchEntries:()=>Promise.resolve({entries:[],online:false}),FB_ON:false,puzzleScore:(m,s,c)=>Math.max(1,Math.round(10000/(m*.6+Math.max(1,s)*.4)*(c<=3?1:c<=5?2.5:5))),memoryScore:(p,f,s)=>Math.max(1,Math.round(p*1200/(f*.55+Math.max(1,s)*.45))),reactionScore:(a)=>Math.max(1,Math.round(50000/a))};
 const canvas=document.getElementById('gc'), ctx=canvas.getContext('2d');
 const W=Math.min(window.innerWidth-32,580), H=Math.min(window.innerHeight-260,520);
 canvas.width=W; canvas.height=H;
@@ -139,8 +140,10 @@ function renderLives(){
 const keys={};
 document.addEventListener('keydown',e=>{
   keys[e.code]=true;
-  if(e.code==='Space'){e.preventDefault(); fireBullet();}
-  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+  if(e.code==='Space'){
+    if(running){ e.preventDefault(); fireBullet(); }
+  }
+  if(running && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
 });
 document.addEventListener('keyup',e=>keys[e.code]=false);
 
@@ -151,7 +154,6 @@ mcBtn('mc-thrust','thrust'); mcBtn('mc-left','left'); mcBtn('mc-right','right');
 document.getElementById('mc-shoot').addEventListener('touchstart',e=>{e.preventDefault();fireBullet();},{passive:false});
 document.getElementById('mc-shoot').addEventListener('mousedown',()=>fireBullet());
 
-let shootCooldown=0;
 function fireBullet(){
   if(!running||!ship.alive||shootCooldown>0) return;
   bullets.push({x:ship.x+Math.cos(ship.angle)*SHIP_SIZE,y:ship.y+Math.sin(ship.angle)*SHIP_SIZE,vx:Math.cos(ship.angle)*BULLET_SPEED+ship.vx*0.3,vy:Math.sin(ship.angle)*BULLET_SPEED+ship.vy*0.3,life:BULLET_LIFE});
@@ -234,7 +236,12 @@ function gameOver(){
     ov.querySelector('.ov-title').textContent='GAME OVER';
     ov.querySelector('.ov-title').style.color='var(--magenta)';
     ov.querySelector('.ov-sub').innerHTML=`SCORE: ${score} &nbsp;·&nbsp; WAVE: ${wave}`;
-    ov.querySelector('.ov-btn').textContent='↺ RETRY';
+    const btn = ov.querySelector('.ov-btn');
+    btn.textContent='↺ RETRY';
+    // Replace node to clear old listeners, wire fresh retry
+    const fresh = btn.cloneNode(true);
+    btn.parentNode.replaceChild(fresh, btn);
+    fresh.addEventListener('click', startGame);
     ov.classList.remove('hidden');
   };
   if(score > 0 && typeof LB !== 'undefined'){
