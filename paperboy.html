@@ -9,33 +9,30 @@
     :root{--bg:#07070f;--border:#1e1e3a;--yellow:#f9c74f;--magenta:#f72585;--cyan:#00f5d4;--green:#06d6a0;--orange:#fb8500;--text:#e8e8ff;--muted:#6060a0}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow:hidden}
-    .page{position:relative;z-index:1;width:100%;max-width:600px;padding:20px 16px 12px;display:flex;flex-direction:column;align-items:center;gap:12px}
+    .page{position:relative;z-index:1;width:100%;max-width:600px;padding:18px 16px 10px;display:flex;flex-direction:column;align-items:center;gap:10px}
     .nav{width:100%;display:flex;align-items:center;justify-content:space-between}
     .back-btn{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-decoration:none;letter-spacing:1px;transition:color .2s}
     .back-btn:hover{color:var(--yellow)}
     .back-btn::before{content:'◄ '}
     .game-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--yellow);opacity:.6}
-    h1{font-family:'Press Start 2P',monospace;font-size:clamp(12px,3vw,20px);letter-spacing:3px;color:var(--yellow);text-shadow:0 0 16px rgba(249,199,79,.5)}
-    .stats{display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
+    h1{font-family:'Press Start 2P',monospace;font-size:clamp(12px,3vw,19px);letter-spacing:3px;color:var(--yellow);text-shadow:0 0 16px rgba(249,199,79,.5)}
+    .stats{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}
     .stat{text-align:center}
     .stat-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:2px;margin-bottom:3px}
-    .stat-value{font-family:'Press Start 2P',monospace;font-size:13px;color:var(--yellow)}
+    .stat-value{font-family:'Press Start 2P',monospace;font-size:12px;color:var(--yellow)}
     .stat-value.g{color:var(--green)}
-    .stat-value.r{color:var(--magenta)}
-    .lives-row{display:flex;gap:6px;align-items:center;min-height:18px}
-    .life-pip{font-size:14px}
-    .canvas-wrap{position:relative;border:2px solid var(--border);box-shadow:0 0 20px rgba(249,199,79,.06);touch-action:none}
+    .lives-row{display:flex;gap:6px;align-items:center;min-height:16px}
+    .life-pip{font-size:13px}
+    .canvas-wrap{position:relative;border:2px solid var(--border);touch-action:none}
     #gc{display:block}
     .overlay{position:absolute;inset:0;background:rgba(7,7,15,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
     .overlay.hidden{display:none}
-    .ov-title{font-family:'Press Start 2P',monospace;font-size:clamp(14px,3vw,22px);letter-spacing:2px;color:var(--yellow);text-shadow:0 0 16px var(--yellow);text-align:center}
-    .ov-sub{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-align:center;line-height:2.4}
+    .ov-title{font-family:'Press Start 2P',monospace;font-size:clamp(13px,3vw,20px);letter-spacing:2px;color:var(--yellow);text-shadow:0 0 16px var(--yellow);text-align:center;line-height:1.6}
+    .ov-sub{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:1px;text-align:center;line-height:2.4}
     .ov-btn{font-family:'Press Start 2P',monospace;font-size:9px;padding:12px 28px;border:none;cursor:pointer;letter-spacing:1px;background:var(--yellow);color:#000;box-shadow:0 0 16px rgba(249,199,79,.4);transition:box-shadow .2s}
     .ov-btn:hover{box-shadow:0 0 32px var(--yellow)}
-    /* Mobile throw button */
-    .throw-btn{font-family:'Press Start 2P',monospace;font-size:10px;padding:14px 32px;background:var(--orange);color:#000;border:none;cursor:pointer;box-shadow:0 0 14px rgba(251,133,0,.4);display:none;touch-action:manipulation}
+    .throw-btn{font-family:'Press Start 2P',monospace;font-size:9px;padding:12px 28px;background:var(--orange);color:#000;border:none;cursor:pointer;box-shadow:0 0 12px rgba(251,133,0,.4);display:none;touch-action:manipulation}
     @media(max-width:600px){.throw-btn{display:block}}
-    .ctrl-hint{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:1px;text-align:center;line-height:2.2}
   </style>
 </head>
 <body>
@@ -56,268 +53,278 @@
     <canvas id="gc"></canvas>
     <div class="overlay" id="overlay">
       <div class="ov-title">PAPER RUN</div>
-      <div class="ov-sub">RIDE YOUR BIKE DOWN THE STREET<br>THROW PAPERS AT SUBSCRIBER HOMES<br>DODGE OBSTACLES OR LOSE A LIFE<br><br>← → MOVE &nbsp;·&nbsp; SPACE THROW<br>SUBSCRIBERS HAVE A GLOWING DOOR</div>
+      <div class="ov-sub">
+        RIDE DOWN THE STREET<br>
+        THROW PAPERS AT GLOWING HOUSES<br>
+        DODGE OBSTACLES OR LOSE A LIFE<br><br>
+        ← → MOVE &nbsp;·&nbsp; SPACE THROW
+      </div>
       <button class="ov-btn" id="ov-start">▶ START</button>
     </div>
   </div>
-  <button class="throw-btn" id="throw-btn">🗞 THROW</button>
-  <div class="ctrl-hint" id="ctrl-hint">← → MOVE &nbsp;·&nbsp; SPACE TO THROW</div>
+  <button class="throw-btn" id="throw-btn">🗞 THROW PAPER</button>
 </div>
+
 <script src="firebase-config.js"></script>
 <script src="leaderboard.js"></script>
 <script>
-if(typeof LB==='undefined') window.LB={submit:(_g,_s,_l,cb)=>{if(cb)cb();},show:()=>{},fetchEntries:()=>Promise.resolve({entries:[],online:false}),FB_ON:false,puzzleScore:(m,s,c)=>0,memoryScore:(p,f,s)=>0,reactionScore:(a)=>0};
+if(typeof LB==='undefined') window.LB={submit:(_g,_s,_l,cb)=>{if(cb)cb();},show:()=>{},fetchEntries:()=>Promise.resolve({entries:[],online:false}),FB_ON:false,puzzleScore:()=>0,memoryScore:()=>0,reactionScore:()=>0};
 
 const canvas=document.getElementById('gc');
 const ctx=canvas.getContext('2d');
 const W=Math.min(window.innerWidth-32,520);
-const H=Math.min(window.innerHeight-220,560);
+const H=Math.min(window.innerHeight-200,540);
 canvas.width=W; canvas.height=H;
 
-// ── CONSTANTS ─────────────────────────────────────────────────────────────
-const ROAD_L=W*0.28, ROAD_R=W*0.72;  // road edges
-const ROAD_W=ROAD_R-ROAD_L;
-const PLAYER_W=22, PLAYER_H=34;
-const PAPER_W=8, PAPER_H=6;
-const SCROLL_SPEED_BASE=2.8;
-const HOUSE_SPACING=220;
+// ── DIAGONAL ROAD GEOMETRY ────────────────────────────────────────────────
+// Road goes from bottom-left (player) to top-right (horizon)
+// Objects travel from top-right → bottom-left (coming TOWARD the player)
+const ANGLE = 42 * Math.PI / 180;
+const COS_A = Math.cos(ANGLE);   // ≈ 0.743  (right per unit of road dist)
+const SIN_A = Math.sin(ANGLE);   // ≈ 0.669  (up per unit of road dist)
 
+// Road unit direction (ahead = NE, toward horizon)
+const RD_X = COS_A;   // positive = screen right
+const RD_Y = -SIN_A;  // negative = screen up
+
+// Perpendicular RIGHT direction (SE, across road to right side)
+const PR_X = SIN_A;
+const PR_Y = COS_A;
+
+// Player fixed screen origin (bottom-left area)
+const ORIG_X = W * 0.17;
+const ORIG_Y = H * 0.83;
+
+const ROAD_HALF = 52;       // half road width in road units
+const SPAWN_DIST = 640;     // how far ahead objects spawn
+const HOUSE_GAP = 190;      // spacing between house clusters
+
+function roadToScreen(rdist, rperp) {
+  return {
+    sx: ORIG_X + rdist * RD_X + rperp * PR_X,
+    sy: ORIG_Y + rdist * RD_Y + rperp * PR_Y
+  };
+}
+
+// Perspective scale: things farther away are smaller
+function perspScale(rdist) {
+  return Math.max(0.28, 1 - rdist * 0.0011);
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let scrollDist=0, speed=2.1, frameCount=0;
+let playerPerp=0, playerInv=0;
 let score=0, streak=0, lives=3, papersLeft=10, running=false, rAF;
+let objects=[], papers=[], particles=[];
+let nextSpawnAt=200, totalDeliveries=0, hitDeliveries=0;
 let best=parseInt(localStorage.getItem('paperBest')||'0');
-let scrollY=0, speed=SCROLL_SPEED_BASE, frameCount=0, level=1;
+let throwCooldown=0;
 document.getElementById('best').textContent=best;
 
-// ── ENTITIES ──────────────────────────────────────────────────────────────
-let player, papers, obstacles, houses, particles, distance, totalHouses, hitHouses;
-
+// ── INPUT ─────────────────────────────────────────────────────────────────
 const KEYS={};
 document.addEventListener('keydown',e=>{
   KEYS[e.code]=true;
-  if(e.code==='Space'&&running){e.preventDefault();throwPaper();}
-  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.code))e.preventDefault();
+  const ov=document.getElementById('overlay');
+  if(e.code==='Space'&&running&&ov.classList.contains('hidden')){e.preventDefault();throwPaper();}
+  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code))e.preventDefault();
 });
 document.addEventListener('keyup',e=>KEYS[e.code]=false);
 
-// Touch / mobile controls
-let touchStartX=null;
+// Touch: swipe across road to move
+let lastTouchX=null;
 canvas.addEventListener('touchstart',e=>{
   const ov=document.getElementById('overlay');
-  if(ov&&!ov.classList.contains('hidden'))return;
-  e.preventDefault();
-  touchStartX=e.touches[0].clientX;
+  if(!ov.classList.contains('hidden'))return;
+  e.preventDefault(); lastTouchX=e.touches[0].clientX;
 },{passive:false});
 canvas.addEventListener('touchmove',e=>{
-  if(!running||touchStartX===null)return;
+  if(!running||lastTouchX===null)return;
   e.preventDefault();
-  const dx=e.touches[0].clientX-touchStartX;
-  player.x=Math.max(ROAD_L+PLAYER_W/2,Math.min(ROAD_R-PLAYER_W/2,player.x+dx*0.6));
-  touchStartX=e.touches[0].clientX;
+  const dx=e.touches[0].clientX-lastTouchX;
+  playerPerp=Math.max(-ROAD_HALF,Math.min(ROAD_HALF,playerPerp+dx*0.5));
+  lastTouchX=e.touches[0].clientX;
 },{passive:false});
-canvas.addEventListener('touchend',e=>{e.preventDefault();touchStartX=null;},{passive:false});
+canvas.addEventListener('touchend',e=>{e.preventDefault();lastTouchX=null;},{passive:false});
 document.getElementById('throw-btn').addEventListener('click',()=>{if(running)throwPaper();});
-document.getElementById('ov-start').addEventListener('click',startGame);
 
-// ── GAME SETUP ────────────────────────────────────────────────────────────
+// ── SETUP ─────────────────────────────────────────────────────────────────
+function renderLives(){ document.getElementById('lives-row').innerHTML=Array(Math.max(0,lives)).fill('<span class="life-pip">🚲</span>').join(''); }
+function updateHUD(){
+  document.getElementById('score').textContent=score;
+  document.getElementById('streak').textContent=streak;
+  document.getElementById('papers').textContent=papersLeft;
+  if(score>best){best=score;localStorage.setItem('paperBest',best);document.getElementById('best').textContent=best;}
+}
+
 function startGame(){
-  score=0; streak=0; lives=3; papersLeft=10; running=true; frameCount=0;
-  level=1; speed=SCROLL_SPEED_BASE; scrollY=0; distance=0; totalHouses=0; hitHouses=0;
-  player={x:W/2, y:H*0.75, vx:0, wobble:0};
-  papers=[]; obstacles=[]; particles=[];
-  houses=generateHouses(0, H*4);
-  totalHouses=houses.filter(h=>h.subscriber).length;
-  document.getElementById('score').textContent=0;
-  document.getElementById('streak').textContent=0;
-  document.getElementById('papers').textContent=10;
-  renderLives();
+  scrollDist=0; speed=2.1; frameCount=0;
+  playerPerp=0; playerInv=0;
+  score=0; streak=0; lives=3; papersLeft=10; throwCooldown=0;
+  objects=[]; papers=[]; particles=[];
+  nextSpawnAt=160; totalDeliveries=0; hitDeliveries=0;
+  running=true;
+  updateHUD(); renderLives();
   document.getElementById('overlay').classList.add('hidden');
   cancelAnimationFrame(rAF);
   loop();
 }
 
-function generateHouses(fromY, toY){
-  const arr=[];
-  for(let y=fromY; y<toY; y+=HOUSE_SPACING){
-    const side=Math.random()<0.5?'left':'right';
-    const subscriber=Math.random()<0.65; // 65% are subscribers
-    arr.push({
-      side, subscriber,
-      y: y+80+Math.random()*40,
-      hit:false,
-      flash:0,
-      num: Math.floor(Math.random()*900)+100
-    });
-    // Sometimes add obstacle on the road
-    if(Math.random()<0.55){
-      const type=['car','cone','dog','puddle'][Math.floor(Math.random()*4)];
-      const ox=ROAD_L+20+Math.random()*(ROAD_W-40);
-      obstacles.push({type, x:ox, y:y+160+Math.random()*40, w:type==='car'?36:20, h:type==='car'?56:20, hit:false});
+// ── SPAWN ──────────────────────────────────────────────────────────────────
+function spawnObjects(){
+  // Keep spawning ahead of player as they scroll
+  while(scrollDist + SPAWN_DIST > nextSpawnAt){
+    const baseDist = nextSpawnAt;
+    nextSpawnAt += HOUSE_GAP + Math.random()*80;
+
+    // House on left side (main delivery side)
+    const sub = Math.random()<0.68;
+    if(sub) totalDeliveries++;
+    objects.push({type:'house', baseDist, rperp:-(ROAD_HALF+55+Math.random()*25),
+      subscriber:sub, hit:false, flash:0, num:Math.floor(Math.random()*900)+100, side:'left'});
+
+    // Occasional right-side house
+    if(Math.random()<0.42){
+      const sub2=Math.random()<0.45;
+      if(sub2) totalDeliveries++;
+      objects.push({type:'house', baseDist:baseDist+25+Math.random()*30,
+        rperp:ROAD_HALF+55+Math.random()*25,
+        subscriber:sub2, hit:false, flash:0, num:Math.floor(Math.random()*900)+100, side:'right'});
+    }
+
+    // Obstacle on road
+    if(Math.random()<0.52){
+      const types=['car','cone','dog','puddle'];
+      const otype=types[Math.floor(Math.random()*types.length)];
+      const rperp=(Math.random()*2-1)*ROAD_HALF*0.72;
+      objects.push({type:'obstacle', otype, baseDist:baseDist+70+Math.random()*60,
+        rperp, hw:otype==='car'?18:11, hh:otype==='car'?28:11, hit:false});
     }
   }
-  return arr;
 }
 
-function renderLives(){
-  document.getElementById('lives-row').innerHTML=Array(Math.max(0,lives)).fill('<span class="life-pip">🚲</span>').join('');
-}
-
-// ── THROW ─────────────────────────────────────────────────────────────────
-let throwCooldown=0;
-const GRAVITY=0.06; // reduced gravity so paper carries further
-
+// ── THROW ──────────────────────────────────────────────────────────────────
 function throwPaper(){
-  if(throwCooldown>0||papersLeft<=0)return;
+  if(throwCooldown>0||papersLeft<=0) return;
 
-  // Find the nearest upcoming house on either side within range
-  let target=null, bestDist=Infinity;
-  for(const h of houses){
-    if(h.hit)continue;
-    const screenY = h.y - scrollY + H*0.2;
-    // Only consider houses ahead (above player) or just at player level, within 400px
-    if(screenY > player.y+60 || screenY < player.y-400) continue;
-    const hx = h.side==='left' ? ROAD_L-30 : ROAD_R+30;
-    const dist = Math.abs(screenY - player.y) + Math.abs(hx - player.x);
-    if(dist < bestDist){ bestDist=dist; target={hx, hy:screenY, side:h.side}; }
+  const {sx:px, sy:py} = roadToScreen(0, playerPerp);
+
+  // Find nearest upcoming house
+  let target=null, bestD=Infinity;
+  for(const o of objects){
+    if(o.type!=='house'||o.hit) continue;
+    const eff=o.baseDist-scrollDist;
+    if(eff<5||eff>420) continue;
+    const {sx,sy}=roadToScreen(eff,o.rperp);
+    const d=eff*0.8+Math.abs(o.rperp)*0.2;
+    if(d<bestD){bestD=d; target={sx,sy};}
   }
-
-  // If no house found, throw toward nearest side based on player position
   if(!target){
-    const goLeft = player.x < W/2;
-    target = {
-      hx: goLeft ? ROAD_L-30 : ROAD_R+30,
-      hy: player.y - 120,
-      side: goLeft ? 'left' : 'right'
-    };
+    // Default: throw toward left-side house zone ahead
+    const t=roadToScreen(220,-(ROAD_HALF+70));
+    target={sx:t.sx, sy:t.sy};
   }
 
-  // Calculate vx needed: horizontal distance / flight time
-  // Flight time estimate: paper travels up then arcs toward target hy
-  const dx = target.hx - player.x;
-  const dy = target.hy - (player.y - PLAYER_H/2); // negative = target is above
-  // Use fixed upward vy and solve for flight time to reach target dy
-  const vy0 = -5.5;
-  // dy = vy0*t + 0.5*GRAVITY*t^2  =>  0.5*GRAVITY*t^2 + vy0*t - dy = 0
-  const a=0.5*GRAVITY, b=vy0, c=-dy;
-  const disc = b*b - 4*a*c;
-  let t = disc >= 0 ? (-b - Math.sqrt(disc))/(2*a) : 30;
-  t = Math.max(15, Math.min(60, t)); // clamp to reasonable range
-  const vx = dx / t;
+  // Aim paper at target using projectile physics
+  const dx=target.sx-px, dy=target.sy-(py-12);
+  const G=0.055, vy0=-5.8;
+  const a=0.5*G, b=vy0, c=-dy;
+  const disc=b*b-4*a*c;
+  let tf = disc>=0 ? (-b-Math.sqrt(disc))/(2*a) : 32;
+  tf=Math.max(18,Math.min(65,tf));
 
-  papers.push({
-    x: player.x,
-    y: player.y - PLAYER_H/2,
-    vx, vy: vy0,
-    rot:0, active:true
-  });
-
+  papers.push({sx:px, sy:py-12, vsx:dx/tf, vsy:vy0, rot:0});
   papersLeft--;
-  document.getElementById('papers').textContent=papersLeft;
-  throwCooldown=14;
+  throwCooldown=15;
+  updateHUD();
 }
 
-// ── MAIN LOOP ─────────────────────────────────────────────────────────────
-function loop(){
-  rAF=requestAnimationFrame(loop);
-  if(running)update();
-  draw();
-}
-
+// ── UPDATE ─────────────────────────────────────────────────────────────────
 function update(){
   frameCount++;
-  if(throwCooldown>0)throwCooldown--;
+  if(throwCooldown>0) throwCooldown--;
+  if(playerInv>0) playerInv--;
 
-  // Speed ramp
-  speed=SCROLL_SPEED_BASE+Math.floor(distance/800)*0.25;
-  scrollY+=speed; distance+=speed;
+  // Very gradual speed increase
+  speed = 2.1 + Math.floor(scrollDist/900)*0.14;
+  scrollDist += speed;
 
-  // Player movement
-  const moveSpeed=3.8;
-  if(KEYS['ArrowLeft']||KEYS['KeyA']) player.vx=Math.max(player.vx-0.6,-moveSpeed);
-  else if(KEYS['ArrowRight']||KEYS['KeyD']) player.vx=Math.min(player.vx+0.6,moveSpeed);
-  else player.vx*=0.82;
+  spawnObjects();
 
-  player.x+=player.vx;
-  player.x=Math.max(ROAD_L+PLAYER_W/2, Math.min(ROAD_R-PLAYER_W/2, player.x));
-  player.wobble+=0.18;
+  // Player movement (perpendicular to road)
+  if(KEYS['ArrowLeft']||KEYS['KeyA']) playerPerp=Math.max(-ROAD_HALF, playerPerp-2.6);
+  else if(KEYS['ArrowRight']||KEYS['KeyD']) playerPerp=Math.min(ROAD_HALF, playerPerp+2.6);
 
-  // Papers move
+  // Replenish papers
+  if(papersLeft===0 && scrollDist>300){
+    papersLeft=8; spawnBurst(roadToScreen(0,playerPerp),'#f9c74f'); updateHUD();
+  }
+
+  // Update papers
   papers=papers.filter(p=>{
-    p.x+=p.vx; p.y+=p.vy; p.vy+=GRAVITY; p.rot+=0.15;
-    // Check hit on houses — generous hit box
-    for(const h of houses){
-      if(h.hit)continue;
-      const hx=h.side==='left'?ROAD_L-30:ROAD_R+30;
-      const hy=h.y-scrollY+H*0.2;
-      if(Math.abs(p.x-hx)<72&&Math.abs(p.y-hy)<64){
-        h.hit=true; h.flash=25; p.active=false;
-        if(h.subscriber){
-          streak++; hitHouses++;
-          const bonus=streak>=3?streak*2:1;
-          score+=100*bonus;
-          spawnParticles(p.x,p.y,'#06d6a0',12);
+    p.sx+=p.vsx; p.sy+=p.vsy; p.vsy+=0.055; p.rot+=0.14;
+    // Hit check against houses
+    for(const o of objects){
+      if(o.type!=='house'||o.hit) continue;
+      const eff=o.baseDist-scrollDist;
+      if(eff<-60||eff>SPAWN_DIST) continue;
+      const {sx,sy}=roadToScreen(eff,o.rperp);
+      const sc=perspScale(eff);
+      if(Math.abs(p.sx-sx)<68*sc && Math.abs(p.sy-sy)<56*sc){
+        o.hit=true; o.flash=30;
+        if(o.subscriber){
+          hitDeliveries++; streak++;
+          const mult=streak>=3?Math.min(streak,6):1;
+          score+=100*mult;
+          spawnBurst({sx:p.sx,sy:p.sy},'#06d6a0');
         } else {
-          streak=0;
-          score=Math.max(0,score-30);
-          spawnParticles(p.x,p.y,'#f72585',8);
+          streak=0; score=Math.max(0,score-30);
+          spawnBurst({sx:p.sx,sy:p.sy},'#f72585');
         }
-        document.getElementById('score').textContent=score;
-        document.getElementById('streak').textContent=streak;
-        if(score>best){best=score;localStorage.setItem('paperBest',best);document.getElementById('best').textContent=best;}
+        updateHUD();
         return false;
       }
     }
-    // Fell off screen
-    if(p.y>H+20||p.y<-60)return false;
-    return p.active;
+    return p.sx>-30&&p.sx<W+30&&p.sy>-80&&p.sy<H+40;
   });
 
   // Player vs obstacles
-  for(const ob of obstacles){
-    if(ob.hit)continue;
-    const oy=ob.y-scrollY+H*0.2;
-    if(oy>H+80||oy<-60){continue;}
-    if(Math.abs(player.x-ob.x)<(PLAYER_W/2+ob.w/2)*0.85&&Math.abs(player.y-oy)<(PLAYER_H/2+ob.h/2)*0.85){
-      ob.hit=true;
-      spawnParticles(player.x,player.y,'#f72585',16);
-      streak=0; document.getElementById('streak').textContent=0;
-      lives--;
-      renderLives();
-      if(lives<=0){endGame();return;}
-      // Brief invincibility flash
-      player.invincible=90;
+  if(playerInv===0){
+    const {sx:plx,sy:ply}=roadToScreen(0,playerPerp);
+    for(const o of objects){
+      if(o.type!=='obstacle'||o.hit) continue;
+      const eff=o.baseDist-scrollDist;
+      if(Math.abs(eff)>55) continue;
+      const {sx,sy}=roadToScreen(eff,o.rperp);
+      if(Math.abs(plx-sx)<30&&Math.abs(ply-sy)<30){
+        o.hit=true; streak=0; lives--;
+        spawnBurst({sx:plx,sy:ply},'#f72585');
+        playerInv=100; updateHUD(); renderLives();
+        if(lives<=0){endGame();return;}
+      }
     }
   }
-  if(player.invincible>0)player.invincible--;
 
-  // Replenish papers if very low and far enough in
-  if(papersLeft<=0&&distance>300){
-    papersLeft=8; document.getElementById('papers').textContent=8;
-    spawnParticles(player.x,player.y,'#f9c74f',10);
-  }
-
-  // Generate more world as player scrolls
-  const worldBottom=houses.length?Math.max(...houses.map(h=>h.y)):0;
-  if(scrollY+H*2>worldBottom-400){
-    const newHouses=generateHouses(worldBottom+50, worldBottom+H*3);
-    houses.push(...newHouses);
-  }
+  // Remove far-behind objects
+  objects=objects.filter(o=>o.baseDist-scrollDist>-120);
 
   // Particles
-  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;return p.life>0;});
+  particles=particles.filter(p=>{p.sx+=p.vsx;p.sy+=p.vsy;p.life--;return p.life>0;});
 }
 
-function spawnParticles(x,y,color,n){
-  for(let i=0;i<n;i++) particles.push({x,y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5+(-2),color,life:25+Math.random()*15});
+function spawnBurst(pos,color){
+  for(let i=0;i<10;i++) particles.push({sx:pos.sx,sy:pos.sy,vsx:(Math.random()-.5)*5,vsy:(Math.random()-.5)*5-1,color,life:22+Math.random()*14});
 }
 
+// ── GAME OVER ──────────────────────────────────────────────────────────────
 function endGame(){
   running=false; cancelAnimationFrame(rAF);
-  const accuracy=totalHouses>0?Math.round(hitHouses/totalHouses*100):0;
-  const finalScore=score;
-  LB.submit('paperboy',finalScore,`SCORE: ${finalScore} &nbsp;·&nbsp; ACC: ${accuracy}%`,()=>{
+  const acc=totalDeliveries>0?Math.round(hitDeliveries/totalDeliveries*100):0;
+  LB.submit('paperboy',score,`SCORE: ${score} &nbsp;·&nbsp; ACC: ${acc}%`,()=>{
     const ov=document.getElementById('overlay');
     ov.querySelector('.ov-title').textContent='WIPEOUT!';
     ov.querySelector('.ov-title').style.color='var(--magenta)';
-    ov.querySelector('.ov-sub').innerHTML=`SCORE: ${finalScore}<br>ACCURACY: ${accuracy}%<br>STREAK BEST: ${streak}`;
+    ov.querySelector('.ov-sub').innerHTML=`SCORE: ${score}<br>ACCURACY: ${acc}%`;
     const btn=ov.querySelector('.ov-btn');
     btn.textContent='↺ RETRY';
     const fresh=btn.cloneNode(true);
@@ -327,229 +334,227 @@ function endGame(){
   });
 }
 
+// ── LOOP ──────────────────────────────────────────────────────────────────
+function loop(){ rAF=requestAnimationFrame(loop); if(running)update(); draw(); }
+
 // ── DRAW ──────────────────────────────────────────────────────────────────
 function draw(){
-  ctx.clearRect(0,0,W,H);
+  // Sky / grass background
+  const sky=ctx.createLinearGradient(0,0,W,H);
+  sky.addColorStop(0,'#0a0a18'); sky.addColorStop(1,'#0d1a0d');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
 
-  // Sky gradient
-  ctx.fillStyle='#06060f'; ctx.fillRect(0,0,W,H);
+  // Grass texture (simple dots)
+  ctx.fillStyle='rgba(20,50,20,0.4)';
+  for(let i=0;i<30;i++) ctx.fillRect((i*137+scrollDist*0.3)%W,(i*73)%H,2,2);
 
-  // Sidewalks
-  ctx.fillStyle='#1a1a2e';
-  ctx.fillRect(0,0,ROAD_L,H);
-  ctx.fillRect(ROAD_R,0,W-ROAD_R,H);
+  // Draw sidewalks and road
+  drawRoad();
 
-  // Road
-  const roadGrad=ctx.createLinearGradient(ROAD_L,0,ROAD_R,0);
-  roadGrad.addColorStop(0,'#111118'); roadGrad.addColorStop(.5,'#161620'); roadGrad.addColorStop(1,'#111118');
-  ctx.fillStyle=roadGrad; ctx.fillRect(ROAD_L,0,ROAD_W,H);
+  // Sort objects: draw farthest first (higher rdist = farther = draw first)
+  const vis=objects
+    .map(o=>({...o,eff:o.baseDist-scrollDist}))
+    .filter(o=>o.eff>-90&&o.eff<SPAWN_DIST+20)
+    .sort((a,b)=>b.eff-a.eff);
 
-  // Road edge lines
-  ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(ROAD_L,0); ctx.lineTo(ROAD_L,H); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(ROAD_R,0); ctx.lineTo(ROAD_R,H); ctx.stroke();
-
-  // Centre dashes
-  ctx.setLineDash([24,18]); ctx.strokeStyle='rgba(249,199,79,0.15)'; ctx.lineWidth=2;
-  ctx.lineDashOffset=-scrollY%42;
-  ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Houses
-  for(const h of houses){
-    const hy=h.y-scrollY+H*0.2;
-    if(hy<-120||hy>H+80)continue;
-    drawHouse(h, hy);
-    if(h.flash>0)h.flash--;
+  for(const o of vis){
+    const {sx,sy}=roadToScreen(o.eff,o.rperp);
+    if(sx<-100||sx>W+100||sy<-100||sy>H+100) continue;
+    const sc=perspScale(o.eff);
+    if(o.flash>0) o.flash--;
+    if(o.type==='house') drawHouse(sx,sy,o,sc);
+    else if(o.type==='obstacle') drawObstacle(sx,sy,o,sc);
   }
-
-  // Obstacles
-  for(const ob of obstacles){
-    const oy=ob.y-scrollY+H*0.2;
-    if(oy<-80||oy>H+80)continue;
-    drawObstacle(ob,oy);
-  }
-
-  // Particles
-  particles.forEach(p=>{
-    ctx.globalAlpha=p.life/40; ctx.fillStyle=p.color;
-    ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill();
-  });
-  ctx.globalAlpha=1;
 
   // Papers in flight
   papers.forEach(p=>{
-    ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
-    ctx.fillStyle='#e8e8cc'; ctx.fillRect(-PAPER_W/2,-PAPER_H/2,PAPER_W,PAPER_H);
+    ctx.save(); ctx.translate(p.sx,p.sy); ctx.rotate(p.rot);
+    ctx.fillStyle='#e8e8cc';
+    ctx.fillRect(-5,-4,10,8);
     ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=0.5;
-    ctx.strokeRect(-PAPER_W/2,-PAPER_H/2,PAPER_W,PAPER_H);
-    // Lines on paper
-    ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=0.8;
-    for(let l=1;l<3;l++){ctx.beginPath();ctx.moveTo(-PAPER_W/2+2,(-PAPER_H/2)+l*2);ctx.lineTo(PAPER_W/2-2,(-PAPER_H/2)+l*2);ctx.stroke();}
+    ctx.strokeRect(-5,-4,10,8);
     ctx.restore();
   });
 
-  // Player (bicycle + rider)
-  if(!running&&!player)return;
+  // Particles
+  particles.forEach(p=>{
+    ctx.globalAlpha=p.life/35;
+    ctx.fillStyle=p.color;
+    ctx.beginPath(); ctx.arc(p.sx,p.sy,3,0,Math.PI*2); ctx.fill();
+  });
+  ctx.globalAlpha=1;
+
+  // Player
   drawPlayer();
 
-  // HUD overlay — score bar at top
-  ctx.fillStyle='rgba(7,7,15,0.7)';
-  ctx.fillRect(0,0,W,28);
-  ctx.font="8px 'Press Start 2P'"; ctx.fillStyle='#f9c74f'; ctx.textAlign='left';
-  ctx.fillText(`DIST: ${Math.floor(distance)}m`, 8, 18);
+  // HUD
+  ctx.fillStyle='rgba(7,7,15,0.7)'; ctx.fillRect(0,0,W,26);
+  ctx.font="8px 'Press Start 2P'"; ctx.textAlign='left'; ctx.fillStyle='#f9c74f';
+  ctx.fillText(`DIST: ${Math.floor(scrollDist)}m`,8,17);
   ctx.textAlign='right';
-  if(papersLeft<=2){ctx.fillStyle='#f72585';}
-  ctx.fillText(`📰 ${papersLeft}`, W-8, 18);
+  ctx.fillStyle=papersLeft<=2?'#f72585':'#e8e8ff';
+  ctx.fillText(`📰${papersLeft}`,W-8,17);
   ctx.textAlign='left';
 }
 
-function drawHouse(h, hy){
-  const isLeft=h.side==='left';
-  const hx=isLeft?ROAD_L-10:ROAD_R+10;
-  const hw=72, hh=58;
-  const bx=isLeft?hx-hw:hx;
-  const by=hy-hh;
+function drawRoad(){
+  const steps=18;
 
-  // Glow for subscribers
-  if(h.subscriber&&!h.hit){
-    ctx.shadowBlur=h.flash>0?20:8;
-    ctx.shadowColor=h.flash>0?'#06d6a0':'#f9c74f';
+  // Left sidewalk
+  ctx.beginPath();
+  for(let i=0;i<=steps;i++){const{sx,sy}=roadToScreen(i/steps*620,-(ROAD_HALF)); i===0?ctx.moveTo(sx,sy):ctx.lineTo(sx,sy);}
+  for(let i=steps;i>=0;i--){const{sx,sy}=roadToScreen(i/steps*620,-(ROAD_HALF+70)); ctx.lineTo(sx,sy);}
+  ctx.closePath(); ctx.fillStyle='#1e1e2a'; ctx.fill();
+
+  // Right sidewalk
+  ctx.beginPath();
+  for(let i=0;i<=steps;i++){const{sx,sy}=roadToScreen(i/steps*620,(ROAD_HALF)); i===0?ctx.moveTo(sx,sy):ctx.lineTo(sx,sy);}
+  for(let i=steps;i>=0;i--){const{sx,sy}=roadToScreen(i/steps*620,(ROAD_HALF+70)); ctx.lineTo(sx,sy);}
+  ctx.closePath(); ctx.fillStyle='#1a1a28'; ctx.fill();
+
+  // Road
+  ctx.beginPath();
+  for(let i=0;i<=steps;i++){const{sx,sy}=roadToScreen(i/steps*620,-ROAD_HALF); i===0?ctx.moveTo(sx,sy):ctx.lineTo(sx,sy);}
+  for(let i=steps;i>=0;i--){const{sx,sy}=roadToScreen(i/steps*620,ROAD_HALF); ctx.lineTo(sx,sy);}
+  ctx.closePath();
+  const rg=ctx.createLinearGradient(ORIG_X,ORIG_Y,ORIG_X+400*RD_X,ORIG_Y+400*RD_Y);
+  rg.addColorStop(0,'#181824'); rg.addColorStop(1,'#101018');
+  ctx.fillStyle=rg; ctx.fill();
+
+  // Road edges
+  ctx.strokeStyle='rgba(255,255,255,0.13)'; ctx.lineWidth=1.5;
+  for(const side of[-ROAD_HALF,ROAD_HALF]){
+    ctx.beginPath();
+    for(let i=0;i<=steps;i++){const{sx,sy}=roadToScreen(i/steps*620,side); i===0?ctx.moveTo(sx,sy):ctx.lineTo(sx,sy);}
+    ctx.stroke();
   }
 
-  // House body
-  ctx.fillStyle=h.hit?'#1a3a1a':h.flash>0?'#0a2a0a':'#1e1e32';
-  ctx.fillRect(bx,by,hw,hh);
+  // Centre dashes
+  ctx.setLineDash([14,11]); ctx.strokeStyle='rgba(249,199,79,0.1)'; ctx.lineWidth=1.2;
+  ctx.lineDashOffset=-(scrollDist%25);
+  ctx.beginPath();
+  for(let i=0;i<=steps;i++){const{sx,sy}=roadToScreen(i/steps*620,0); i===0?ctx.moveTo(sx,sy):ctx.lineTo(sx,sy);}
+  ctx.stroke(); ctx.setLineDash([]);
+}
+
+function drawHouse(sx,sy,o,sc){
+  const hw=50*sc, hh=42*sc;
+  ctx.save(); ctx.translate(sx,sy);
+
+  // Glow for subscribers
+  if(o.subscriber&&!o.hit){
+    ctx.shadowBlur=o.flash>0?18:7;
+    ctx.shadowColor=o.flash>0?'#06d6a0':'#f9c74f';
+  }
+
+  // Body
+  ctx.fillStyle=o.hit?'#1a3a1a':o.flash>0?'#0a2a0a':'#1e1e34';
+  ctx.fillRect(-hw/2,-hh,hw,hh);
 
   // Roof
-  ctx.fillStyle=h.hit?'#2a5a2a':h.flash>0?'#1a4a1a':'#2a1a3a';
-  ctx.beginPath();
-  ctx.moveTo(bx-4,by);
-  ctx.lineTo(bx+hw/2,by-22);
-  ctx.lineTo(bx+hw+4,by);
-  ctx.closePath(); ctx.fill();
+  ctx.fillStyle=o.hit?'#2a5a2a':'#2a1a3c';
+  ctx.beginPath(); ctx.moveTo(-hw/2-3,-hh); ctx.lineTo(0,-hh-16*sc); ctx.lineTo(hw/2+3,-hh); ctx.closePath(); ctx.fill();
 
   // Door
-  const dx=bx+hw/2-8, dy=by+hh-22;
-  ctx.fillStyle=h.subscriber&&!h.hit?'#f9c74f':'#3a2a1a';
-  ctx.fillRect(dx,dy,16,22);
-  if(h.subscriber&&!h.hit){
-    ctx.shadowBlur=12; ctx.shadowColor='#f9c74f';
-    ctx.strokeStyle='#ffaa00'; ctx.lineWidth=1.5;
-    ctx.strokeRect(dx,dy,16,22);
+  const dw=12*sc, dh=18*sc;
+  ctx.fillStyle=o.subscriber&&!o.hit?'#f9c74f':'#3a2a1a';
+  ctx.fillRect(-dw/2,-dh,dw,dh);
+  if(o.subscriber&&!o.hit){
+    ctx.shadowBlur=10; ctx.shadowColor='#f9c74f';
+    ctx.strokeStyle='#ffaa00'; ctx.lineWidth=1;
+    ctx.strokeRect(-dw/2,-dh,dw,dh);
   }
 
   // Windows
-  ctx.fillStyle=h.subscriber?'rgba(249,199,79,0.3)':'rgba(100,100,150,0.2)';
-  ctx.fillRect(bx+8,by+10,14,12);
-  ctx.fillRect(bx+hw-22,by+10,14,12);
+  ctx.shadowBlur=0;
+  ctx.fillStyle=o.subscriber?'rgba(249,199,79,0.25)':'rgba(80,80,120,0.2)';
+  const ww=10*sc, wh=8*sc;
+  ctx.fillRect(-hw/2+5*sc,-hh+8*sc,ww,wh);
+  ctx.fillRect(hw/2-5*sc-ww,-hh+8*sc,ww,wh);
 
   // Mailbox
-  const mx=isLeft?hx-4:hx+4;
-  ctx.fillStyle=h.hit?'#06d6a0':'#888';
-  ctx.fillRect(mx-(isLeft?8:0),hy-6,8,6);
-  ctx.fillRect(mx-(isLeft?6:-2),hy-12,4,8);
+  ctx.shadowBlur=0;
+  ctx.fillStyle=o.hit?'#06d6a0':'#888';
+  ctx.fillRect(-4*sc,-4*sc,8*sc,4*sc);
+  ctx.fillRect(-3*sc,-9*sc,4*sc,6*sc);
 
   // House number
-  ctx.shadowBlur=0; ctx.fillStyle='rgba(255,255,255,0.5)';
-  ctx.font="6px 'Press Start 2P'"; ctx.textAlign='center';
-  ctx.fillText(h.num, bx+hw/2, by+hh+10);
-
-  ctx.shadowBlur=0;
+  ctx.fillStyle='rgba(255,255,255,0.45)';
+  ctx.font=`${Math.max(5,6*sc)}px 'Press Start 2P'`;
+  ctx.textAlign='center'; ctx.fillText(o.num,0,8*sc);
+  ctx.textAlign='left';
+  ctx.restore();
 }
 
-function drawObstacle(ob, oy){
-  const {type,x,w,h}=ob;
-  if(ob.hit)return;
-  ctx.shadowBlur=0;
-  if(type==='car'){
-    // Car body
+function drawObstacle(sx,sy,o,sc){
+  if(o.hit) return;
+  ctx.save(); ctx.translate(sx,sy);
+  const hw=o.hw*sc, hh=o.hh*sc;
+  if(o.otype==='car'){
     ctx.fillStyle='#c01030';
-    ctx.fillRect(x-w/2,oy-h/2,w,h);
-    ctx.fillStyle='#800020';
-    ctx.fillRect(x-w/2+2,oy-h/2+2,w-4,h*0.4);
-    // Windshield
-    ctx.fillStyle='rgba(100,200,255,0.4)';
-    ctx.fillRect(x-w/2+4,oy-h/2+4,w-8,h*0.3);
-    // Wheels
+    ctx.fillRect(-hw,-hh*1.4,hw*2,hh*2.8);
+    ctx.fillStyle='rgba(100,200,255,0.35)';
+    ctx.fillRect(-hw+3*sc,-hh*1.4+4*sc,hw*2-6*sc,hh*0.9);
     ctx.fillStyle='#111';
-    [[-w/2+3,-h/2+3],[w/2-3-6,-h/2+3],[-w/2+3,h/2-9],[w/2-3-6,h/2-9]].forEach(([dx,dy])=>{
-      ctx.beginPath(); ctx.arc(x+dx+3,oy+dy+3,4,0,Math.PI*2); ctx.fill();
+    [[-hw+3*sc,-hh],[hw-3*sc,-hh],[-hw+3*sc,hh],[hw-3*sc,hh]].forEach(([dx,dy])=>{
+      ctx.beginPath(); ctx.arc(dx,dy,4*sc,0,Math.PI*2); ctx.fill();
     });
-  } else if(type==='cone'){
+  } else if(o.otype==='cone'){
     ctx.fillStyle='#ff6600';
-    ctx.beginPath(); ctx.moveTo(x,oy-h/2); ctx.lineTo(x-w/2,oy+h/2); ctx.lineTo(x+w/2,oy+h/2); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='#fff'; ctx.fillRect(x-w/2,oy,w,4);
-  } else if(type==='dog'){
+    ctx.beginPath(); ctx.moveTo(0,-hh*2); ctx.lineTo(-hw,hh); ctx.lineTo(hw,hh); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.fillRect(-hw,0,hw*2,3*sc);
+  } else if(o.otype==='dog'){
     ctx.fillStyle='#c8a060';
-    ctx.beginPath(); ctx.ellipse(x,oy,12,7,0,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(x+10,oy-4,7,6,0.3,0,Math.PI*2); ctx.fill();
-    // Legs
-    ctx.strokeStyle='#a07840'; ctx.lineWidth=2;
-    [[-6,4],[-2,4],[2,4],[6,4]].forEach(([dx])=>{ctx.beginPath();ctx.moveTo(x+dx,oy+5);ctx.lineTo(x+dx,oy+12);ctx.stroke();});
-    // Tail
-    ctx.beginPath(); ctx.moveTo(x-10,oy); ctx.quadraticCurveTo(x-18,oy-10,x-14,oy-14); ctx.strokeStyle='#c8a060'; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0,0,hw*1.2,hh*0.8,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(hw*0.9,-hh*0.5,hw*0.6,hh*0.7,0.3,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#a07840'; ctx.lineWidth=2*sc;
+    [-hw*0.6,-hw*0.2,hw*0.2,hw*0.6].forEach(dx=>{ctx.beginPath();ctx.moveTo(dx,hh*0.5);ctx.lineTo(dx,hh*1.4);ctx.stroke();});
   } else {
-    // Puddle
     ctx.fillStyle='rgba(50,100,200,0.5)';
-    ctx.beginPath(); ctx.ellipse(x,oy,w,h/2,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0,0,hw*1.5,hh,0,0,Math.PI*2); ctx.fill();
     ctx.strokeStyle='rgba(100,150,255,0.4)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.ellipse(x,oy,w*0.6,h*0.3,0,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0,0,hw*0.8,hh*0.5,0,0,Math.PI*2); ctx.stroke();
   }
+  ctx.restore();
 }
 
 function drawPlayer(){
-  const {x,y,vx,wobble}=player;
-  const inv=player.invincible||0;
-  if(inv>0&&Math.floor(inv/6)%2===1)return;
-
-  ctx.save(); ctx.translate(x,y);
-  const lean=vx*0.08;
+  const {sx,sy}=roadToScreen(0,playerPerp);
+  if(playerInv>0&&Math.floor(playerInv/6)%2===1) return;
+  ctx.save(); ctx.translate(sx,sy);
 
   // Shadow
-  ctx.fillStyle='rgba(0,0,0,0.3)';
-  ctx.beginPath(); ctx.ellipse(lean*4,14,14,5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(2,14,14,5,0,0,Math.PI*2); ctx.fill();
 
   // Wheels
-  ctx.shadowBlur=4; ctx.shadowColor='#00f5d4';
-  ctx.strokeStyle='#00f5d4'; ctx.lineWidth=2;
-  // Back wheel
-  ctx.beginPath(); ctx.arc(lean*2+1,8,9,0,Math.PI*2); ctx.stroke();
-  // Front wheel
-  ctx.beginPath(); ctx.arc(lean*2+1,-10,9,0,Math.PI*2); ctx.stroke();
-  // Spokes
-  ctx.lineWidth=0.8; ctx.strokeStyle='rgba(0,245,212,0.4)';
-  for(let i=0;i<4;i++){const a=i*Math.PI/2+wobble;[[1,8],[1,-10]].forEach(([wx,wy])=>{ctx.beginPath();ctx.moveTo(wx+lean*2,wy);ctx.lineTo(wx+lean*2+Math.cos(a)*9,wy+Math.sin(a)*9);ctx.stroke();});}
+  ctx.shadowBlur=5; ctx.shadowColor='#00f5d4'; ctx.strokeStyle='#00f5d4'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(2,7,9,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(2,-11,9,0,Math.PI*2); ctx.stroke();
 
   // Frame
-  ctx.strokeStyle='#f9c74f'; ctx.lineWidth=2; ctx.shadowColor='#f9c74f';
-  ctx.beginPath(); ctx.moveTo(lean*2+1,17); ctx.lineTo(lean*2+1,-1); ctx.lineTo(lean*2-4,-10); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(lean*2+1,-1); ctx.lineTo(lean*2+6,-10); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(lean*2-6,-1); ctx.lineTo(lean*2+8,-1); ctx.stroke(); // handlebar
+  ctx.strokeStyle='#f9c74f'; ctx.shadowColor='#f9c74f';
+  ctx.beginPath(); ctx.moveTo(2,16); ctx.lineTo(2,0); ctx.lineTo(-3,-11); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(2,0); ctx.lineTo(7,-11); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-6,0); ctx.lineTo(10,0); ctx.stroke();
 
-  // Rider body
+  // Rider
   ctx.shadowBlur=0;
-  ctx.fillStyle='#4a4a8a';
-  ctx.fillRect(lean*3-6,-24,12,18); // torso
-  // Head
-  ctx.fillStyle='#f0c090';
-  ctx.beginPath(); ctx.arc(lean*3,(-24-8),7,0,Math.PI*2); ctx.fill();
-  // Helmet
-  ctx.fillStyle='#f72585';
-  ctx.beginPath(); ctx.arc(lean*3,(-24-8),7.5,Math.PI,2*Math.PI); ctx.fill();
-  // Arm holding papers
+  ctx.fillStyle='#4a4a8a'; ctx.fillRect(-5,-26,12,18);
+  ctx.fillStyle='#f0c090'; ctx.beginPath(); ctx.arc(2,-33,6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#f72585'; ctx.beginPath(); ctx.arc(2,-33,6.5,Math.PI,2*Math.PI); ctx.fill();
   ctx.strokeStyle='#4a4a8a'; ctx.lineWidth=3;
-  ctx.beginPath(); ctx.moveTo(lean*3-6,-18); ctx.lineTo(lean*3-14,-12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-5,-20); ctx.lineTo(-13,-14); ctx.stroke();
+
   // Paper bag
   if(papersLeft>0){
-    ctx.fillStyle='#e8d090';
-    ctx.fillRect(lean*3-20,-16,10,12);
-    ctx.strokeStyle='#c8b060'; ctx.lineWidth=1;
-    ctx.strokeRect(lean*3-20,-16,10,12);
+    ctx.fillStyle='#e8d090'; ctx.fillRect(-19,-18,10,12);
+    ctx.strokeStyle='#c8b060'; ctx.lineWidth=1; ctx.strokeRect(-19,-18,10,12);
   }
-
-  ctx.shadowBlur=0; ctx.restore();
+  ctx.restore();
 }
+
+document.getElementById('ov-start').addEventListener('click',startGame);
+draw();
 </script>
 </body>
 </html>
