@@ -64,7 +64,7 @@
 
 <script>
   // LB safety shim - no-op if leaderboard.js failed to load
-  if(typeof LB === 'undefined') window.LB = { submit:(_g,_s,_l,cb)=>{ if(cb) cb(); }, show:()=>{}, puzzleScore:()=>0, memoryScore:()=>0, reactionScore:()=>0 };
+  if(typeof LB==='undefined') window.LB={submit:(_g,_s,_l,cb)=>{if(cb)cb();},show:()=>{},fetchEntries:()=>Promise.resolve({entries:[],online:false}),FB_ON:false,puzzleScore:(m,s,c)=>Math.max(1,Math.round(10000/(m*.6+Math.max(1,s)*.4)*(c<=3?1:c<=5?2.5:5))),memoryScore:(p,f,s)=>Math.max(1,Math.round(p*1200/(f*.55+Math.max(1,s)*.45))),reactionScore:(a)=>Math.max(1,Math.round(50000/a))};
 const canvas = document.getElementById('gc');
 const ctx    = canvas.getContext('2d');
 const wrap   = document.getElementById('cwrap');
@@ -117,7 +117,7 @@ function buildBricks(lv) {
 }
 
 function initState(lv) {
-  const speed = 4 + lv * 0.6;
+  const speed = (4 + lv * 0.6) * 0.75;
   const paddleW = Math.max(PADDLE_W_BASE - lv * 5, W * 0.1);
   return {
     paddle: { x: W/2, y: H - 40, w: paddleW },
