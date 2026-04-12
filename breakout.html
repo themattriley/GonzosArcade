@@ -123,6 +123,7 @@ function initState(lv) {
     paddle: { x: W/2, y: H - 40, w: paddleW },
     ball: { x: W/2, y: H - 60, vx: speed * (Math.random() > .5 ? 1 : -1), vy: -speed },
     bricks: buildBricks(lv),
+    speed,
     started: false,
     dead: false, won: false
   };
@@ -158,7 +159,7 @@ function update() {
       b.x >= p.x - p.w/2 && b.x <= p.x + p.w/2) {
     b.y = p.y - BALL_R;
     const rel = (b.x - p.x) / (p.w/2);
-    const spd = Math.hypot(b.vx, b.vy);
+    const spd = s.speed;
     const angle = rel * 60 * Math.PI/180;
     b.vx = spd * Math.sin(angle);
     b.vy = -spd * Math.cos(angle);
@@ -186,10 +187,9 @@ function update() {
     lives--;
     if (lives <= 0) { lives = 0; renderLives(); gameOver(false); return; }
     renderLives();
-    // Reset ball
-    const spd = Math.hypot(b.vx, b.vy);
+    // Reset ball at canonical speed
     b.x = p.x; b.y = p.y - BALL_R - 2;
-    b.vx = spd * (Math.random() > .5 ? 1 : -1); b.vy = -spd;
+    b.vx = s.speed * (Math.random() > .5 ? 1 : -1); b.vy = -s.speed;
     state.started = false;
   }
 
