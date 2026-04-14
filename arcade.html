@@ -332,9 +332,8 @@
 <body>
 
 <nav class="nav">
-  <a class="back-btn" href="arcade-hub.html">HUB</a>
   <span class="nav-title">THE ARCADE</span>
-  <span class="nav-coins">● INSERT COIN</span>
+  <span class="nav-coins" id="coin-btn" style="cursor:pointer;user-select:none" title="Insert coin">● INSERT COIN</span>
 </nav>
 
 <!-- Ceiling with strip lights -->
@@ -654,5 +653,47 @@
   </div>
 </div>
 
+<script>
+(function(){
+  let ctx=null;
+  function playCoin(){
+    if(!ctx) ctx=new(window.AudioContext||window.webkitAudioContext)();
+    // Coin drop: metallic ping + resonant rattle
+    const now=ctx.currentTime;
+
+    function tone(freq,start,dur,gain,type='sine'){
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type=type; o.frequency.setValueAtTime(freq,now+start);
+      o.frequency.exponentialRampToValueAtTime(freq*0.6,now+start+dur*0.8);
+      g.gain.setValueAtTime(0,now+start);
+      g.gain.linearRampToValueAtTime(gain,now+start+0.008);
+      g.gain.exponentialRampToValueAtTime(0.001,now+start+dur);
+      o.start(now+start); o.stop(now+start+dur+0.02);
+    }
+
+    // Initial metallic clink
+    tone(4200,0,0.06,0.35,'square');
+    tone(3100,0,0.08,0.25,'sawtooth');
+    // Resonant ring
+    tone(1800,0.01,0.18,0.2);
+    tone(2400,0.01,0.14,0.15);
+    // Coin rolling/settling rattles
+    tone(1200,0.09,0.12,0.12,'square');
+    tone(980, 0.14,0.10,0.09,'square');
+    tone(760, 0.20,0.09,0.07,'square');
+    tone(620, 0.26,0.07,0.05,'square');
+
+    // Flash the INSERT COIN text
+    const el=document.getElementById('coin-btn');
+    el.style.color='#fff';
+    el.style.textShadow='0 0 16px #f9c74f, 0 0 32px #f9c74f';
+    setTimeout(()=>{ el.style.color=''; el.style.textShadow=''; },320);
+  }
+
+  document.getElementById('coin-btn').addEventListener('click', playCoin);
+  document.getElementById('coin-btn').addEventListener('touchstart', e=>{ e.preventDefault(); playCoin(); },{passive:false});
+})();
+</script>
 </body>
 </html>
