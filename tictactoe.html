@@ -177,8 +177,9 @@ function aiMove(){
   const m=getAIMove();
   if(m===undefined) return;
   board[m]='O'; turnCount++;
-  renderBoard(); checkEnd();
+  checkEnd();
   if(!gameOver){ playerTurn=true; setStatus('YOUR TURN (X)','you'); }
+  renderBoard();
 }
 
 function checkEnd(){
