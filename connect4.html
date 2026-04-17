@@ -148,6 +148,7 @@
 </div>
 
 <script>
+if(typeof LB==='undefined') window.LB={submit:(_g,_s,_l,cb)=>{if(cb)cb();},show:()=>{},fetchEntries:()=>Promise.resolve({entries:[],online:false}),FB_ON:false,puzzleScore:()=>0,memoryScore:()=>0,reactionScore:()=>0};
 const ROWS=6, COLS=7;
 const COL_ORDER=[3,2,4,1,5,0,6]; // centre-first for minimax
 
@@ -285,15 +286,28 @@ function showEndOverlay(title, sub) {
   document.getElementById('ov-title').innerHTML=title;
   const p2n=mode==='cpu'?'CPU':'P2';
   document.getElementById('ov-sub').innerHTML=`${sub}<br><br>SCORES &nbsp;P1: ${scores[1]} &nbsp;·&nbsp; ${p2n}: ${scores[2]}`;
-  const btnRow=overlay.querySelector('.btn-row');
-  btnRow.innerHTML=`<button class="btn primary" id="ov-again">▶ PLAY AGAIN</button><button class="btn secondary" id="ov-reset">RESET SCORES</button>`;
-  document.getElementById('ov-again').addEventListener('click',initBoard);
-  document.getElementById('ov-reset').addEventListener('click',()=>{
-    scores={1:0,2:0}; draws=0;
-    scoreEls[1].textContent=0; scoreEls[2].textContent=0;
-    drawsRowEl.textContent='DRAWS: 0'; initBoard();
-  });
-  overlay.classList.remove('hidden');
+
+  const showButtons = () => {
+    const btnRow=overlay.querySelector('.btn-row');
+    btnRow.innerHTML=`<button class="btn primary" id="ov-again">▶ PLAY AGAIN</button><button class="btn secondary" id="ov-reset">RESET SCORES</button>`;
+    document.getElementById('ov-again').addEventListener('click',initBoard);
+    document.getElementById('ov-reset').addEventListener('click',()=>{
+      scores={1:0,2:0}; draws=0;
+      scoreEls[1].textContent=0; scoreEls[2].textContent=0;
+      drawsRowEl.textContent='DRAWS: 0'; initBoard();
+    });
+    overlay.classList.remove('hidden');
+  };
+
+  // Submit to leaderboard when player beats CPU — score weighted by difficulty
+  if (mode==='cpu' && scores[1] > 0) {
+    const diffBonus = difficulty==='easy'?1 : difficulty==='medium'?2 : 3;
+    const lbScore = scores[1] * 100 * diffBonus;
+    const label = `WINS: ${scores[1]} &nbsp;·&nbsp; DIFF: ${difficulty.toUpperCase()} &nbsp;·&nbsp; SCORE: ${lbScore}`;
+    LB.submit('connect4', lbScore, label, showButtons);
+  } else {
+    showButtons();
+  }
 }
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
