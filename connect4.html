@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Connect Four — Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#07070f;--border:#1e1e3a;--green:#06d6a0;--magenta:#f72585;
+      --yellow:#f9c74f;--cyan:#00f5d4;--text:#e8e8ff;--muted:#6060a0;
+      --p1:#f72585;--p2:#f9c74f;--p1g:rgba(247,37,133,.5);--p2g:rgba(249,199,79,.5);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(6,214,160,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(6,214,160,.025) 1px,transparent 1px);background-size:32px 32px;pointer-events:none}
+    body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);pointer-events:none}
+    .page{position:relative;z-index:1;width:100%;max-width:700px;padding:32px 20px 60px;display:flex;flex-direction:column;align-items:center;gap:20px}
+    .nav{width:100%;display:flex;align-items:center;justify-content:space-between}
+    .back-btn{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-decoration:none;letter-spacing:1px;transition:color .2s}
+    .back-btn:hover{color:var(--green)}.back-btn::before{content:'◄ '}
+    .game-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--green);opacity:.6}
+    h1{font-family:'Press Start 2P',monospace;font-size:clamp(14px,3.5vw,22px);letter-spacing:3px;color:var(--cyan);text-shadow:0 0 24px rgba(0,245,212,.4);text-align:center}
+
+    .pill-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+    .pill{font-family:'Press Start 2P',monospace;font-size:7px;padding:7px 12px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;letter-spacing:1px;transition:all .15s}
+    .pill:hover{border-color:var(--cyan);color:var(--cyan)}
+    .pill.active{border-color:var(--cyan);color:var(--bg);background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+    .pill.diff-easy.active{background:var(--green);border-color:var(--green);box-shadow:0 0 10px var(--green)}
+    .pill.diff-medium.active{background:var(--yellow);border-color:var(--yellow);box-shadow:0 0 10px var(--yellow);color:#000}
+    .pill.diff-hard.active{background:var(--magenta);border-color:var(--magenta);box-shadow:0 0 10px var(--magenta)}
+    .diff-row{display:none}
+    .diff-row.show{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+
+    .scoreboard{display:flex;width:100%;max-width:480px;border:1px solid var(--border);overflow:hidden}
+    .player-panel{flex:1;padding:12px 16px;display:flex;flex-direction:column;align-items:center;gap:5px;transition:background .3s;position:relative}
+    .player-panel.p1{border-right:1px solid var(--border)}
+    .player-panel.active-p1{background:rgba(247,37,133,.08);box-shadow:inset 0 0 20px rgba(247,37,133,.06)}
+    .player-panel.active-p2{background:rgba(249,199,79,.08);box-shadow:inset 0 0 20px rgba(249,199,79,.06)}
+    .player-label{font-family:'Press Start 2P',monospace;font-size:7px;letter-spacing:2px}
+    .p1 .player-label{color:var(--p1)}.p2 .player-label{color:var(--p2)}
+    .player-score{font-family:'Press Start 2P',monospace;font-size:22px}
+    .p1 .player-score{color:var(--p1);text-shadow:0 0 12px var(--p1g)}
+    .p2 .player-score{color:var(--p2);text-shadow:0 0 12px var(--p2g)}
+    .turn-ind{font-family:'Press Start 2P',monospace;font-size:6px;letter-spacing:1px;opacity:0;transition:opacity .2s}
+    .player-panel.active-p1 .turn-ind,.player-panel.active-p2 .turn-ind{opacity:1}
+    .p1 .turn-ind{color:var(--p1)}.p2 .turn-ind{color:var(--p2)}
+
+    .status{font-family:'Press Start 2P',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:center;min-height:18px;transition:color .2s}
+    .status.p1-turn{color:var(--p1);text-shadow:0 0 10px var(--p1g)}
+    .status.p2-turn{color:var(--p2);text-shadow:0 0 10px var(--p2g)}
+    .status.thinking{color:var(--cyan);animation:blink .6s step-end infinite}
+    .status.win{color:var(--green);text-shadow:0 0 16px rgba(6,214,160,.6)}
+    .status.draw{color:var(--yellow)}
+    @keyframes blink{50%{opacity:.3}}
+    .draws-row{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:2px}
+
+    .board-outer{position:relative;width:100%;max-width:480px}
+    .col-zones{position:absolute;top:0;left:0;right:0;height:100%;display:flex;z-index:10;pointer-events:none}
+    .col-zones.blocked{pointer-events:none !important}
+    .col-zone{flex:1;cursor:pointer;pointer-events:all;position:relative}
+    .col-zone:hover .col-hl{opacity:1}
+    .col-hl{position:absolute;inset:0;opacity:0;transition:opacity .15s}
+    .turn-p1 .col-hl{background:rgba(247,37,133,.06)}
+    .turn-p2 .col-hl{background:rgba(249,199,79,.06)}
+    .drop-prev{position:absolute;top:-44px;left:50%;transform:translateX(-50%);width:36px;height:36px;border-radius:50%;opacity:0;transition:opacity .15s;pointer-events:none}
+    .col-zone:hover .drop-prev{opacity:1}
+    .turn-p1 .drop-prev{background:var(--p1);box-shadow:0 0 14px var(--p1g)}
+    .turn-p2 .drop-prev{background:var(--p2);box-shadow:0 0 14px var(--p2g)}
+
+    .board{background:#0a0a1c;border:2px solid var(--border);box-shadow:0 0 40px rgba(0,245,212,.06);padding:10px;display:grid;grid-template-columns:repeat(7,1fr);gap:8px;transition:box-shadow .3s}
+    .board.glow-p1{box-shadow:0 0 40px rgba(247,37,133,.2);border-color:var(--p1)}
+    .board.glow-p2{box-shadow:0 0 40px rgba(249,199,79,.2);border-color:var(--p2)}
+    .board.glow-win{box-shadow:0 0 60px rgba(6,214,160,.4);border-color:var(--green)}
+    .board.glow-draw{box-shadow:0 0 30px rgba(249,199,79,.2);border-color:var(--yellow)}
+    .cell{aspect-ratio:1;border-radius:50%;background:#050510;border:1px solid #111128;position:relative;overflow:hidden;transition:background .15s}
+    .cell::before{content:'';position:absolute;inset:3px;border-radius:50%;border:1px solid rgba(255,255,255,.04)}
+    .cell.p1{background:var(--p1);box-shadow:0 0 12px var(--p1g),inset 0 2px 6px rgba(255,255,255,.2);border-color:#ff4da0}
+    .cell.p2{background:var(--p2);box-shadow:0 0 12px var(--p2g),inset 0 2px 6px rgba(255,255,255,.2);border-color:#ffdc6e}
+    .cell.win{animation:winpulse .8s ease infinite alternate}
+    .cell.p1.win{background:var(--p1);box-shadow:0 0 24px var(--p1),0 0 48px var(--p1g)}
+    .cell.p2.win{background:var(--p2);box-shadow:0 0 24px var(--p2),0 0 48px var(--p2g)}
+    @keyframes winpulse{from{transform:scale(.94)}to{transform:scale(1.06)}}
+    .cell.dropping{animation:dropin .25s cubic-bezier(.22,1,.36,1)}
+    @keyframes dropin{from{transform:scale(0) translateY(-20px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+
+    .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(2,2,10,.92);z-index:20}
+    .overlay.hidden{display:none}
+    .ov-title{font-family:'Press Start 2P',monospace;font-size:clamp(13px,3vw,20px);letter-spacing:2px;text-align:center;line-height:1.8}
+    .ov-sub{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-align:center;line-height:2.2}
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+    .btn{font-family:'Press Start 2P',monospace;font-size:9px;padding:12px 22px;border:none;cursor:pointer;letter-spacing:1px;transition:all .2s}
+    .btn.primary{background:var(--green);color:#000;box-shadow:0 0 16px rgba(6,214,160,.4)}
+    .btn.primary:hover{box-shadow:0 0 30px rgba(6,214,160,.7)}
+    .btn.secondary{background:transparent;color:var(--muted);border:1px solid var(--border)}
+    .btn.secondary:hover{color:var(--text);border-color:var(--text)}
+    @media(max-width:520px){.drop-prev{display:none}.board{gap:5px;padding:7px}}
+  </style>
+</head>
+<body>
+<div class="page">
+  <nav class="nav">
+    <a class="back-btn" href="arcade.html">ARCADE</a>
+    <span class="game-label">CONNECT FOUR</span>
+  </nav>
+  <h1>CONNECT FOUR</h1>
+
+  <div class="pill-row" id="mode-row">
+    <button class="pill active" data-mode="2p">2 PLAYERS</button>
+    <button class="pill" data-mode="cpu">VS CPU</button>
+  </div>
+  <div class="pill-row diff-row" id="diff-row">
+    <button class="pill diff-easy"   data-diff="easy">EASY</button>
+    <button class="pill diff-medium active" data-diff="medium">MEDIUM</button>
+    <button class="pill diff-hard"   data-diff="hard">HARD</button>
+  </div>
+
+  <div class="scoreboard">
+    <div class="player-panel p1" id="panel-p1">
+      <div class="player-label">PLAYER 1</div>
+      <div class="player-score" id="score-p1">0</div>
+      <div class="turn-ind">YOUR TURN</div>
+    </div>
+    <div class="player-panel p2" id="panel-p2">
+      <div class="player-label" id="p2-label">PLAYER 2</div>
+      <div class="player-score" id="score-p2">0</div>
+      <div class="turn-ind" id="p2-ind">YOUR TURN</div>
+    </div>
+  </div>
+
+  <div class="status" id="status">SELECT MODE &amp; PRESS START</div>
+  <div class="draws-row" id="draws-row">DRAWS: 0</div>
+
+  <div class="board-outer">
+    <div class="col-zones turn-p1" id="col-zones"></div>
+    <div class="board" id="board"></div>
+    <div class="overlay" id="overlay">
+      <div class="ov-title" style="color:var(--cyan)" id="ov-title">CONNECT FOUR</div>
+      <div class="ov-sub" id="ov-sub">DROP 4 IN A ROW TO WIN<br>HORIZONTAL · VERTICAL · DIAGONAL</div>
+      <div class="btn-row"><button class="btn primary" id="start-btn">▶ START GAME</button></div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn secondary" id="reset-btn">↺ NEW GAME</button>
+    <button class="btn secondary" id="scores-btn">✕ RESET SCORES</button>
+  </div>
+</div>
+
+<script>
+const ROWS=6, COLS=7;
+const COL_ORDER=[3,2,4,1,5,0,6]; // centre-first for minimax
+
+let board, currentPlayer, gameOver, cpuThinking;
+let mode='2p', difficulty='medium';
+let scores={1:0,2:0}, draws=0;
+
+const boardEl    = document.getElementById('board');
+const colZonesEl = document.getElementById('col-zones');
+const overlay    = document.getElementById('overlay');
+const statusEl   = document.getElementById('status');
+const scoreEls   = {1:document.getElementById('score-p1'),2:document.getElementById('score-p2')};
+const panelEls   = {1:document.getElementById('panel-p1'),2:document.getElementById('panel-p2')};
+const drawsRowEl = document.getElementById('draws-row');
+const p2Label    = document.getElementById('p2-label');
+const p2Ind      = document.getElementById('p2-ind');
+const diffRow    = document.getElementById('diff-row');
+
+// Build cells — visual row ROWS-1 = bottom of grid = board[0]
+const cells = Array.from({length:ROWS}, ()=>Array(COLS));
+for (let r=ROWS-1; r>=0; r--) {
+  for (let c=0; c<COLS; c++) {
+    const el=document.createElement('div');
+    el.className='cell';
+    boardEl.appendChild(el);
+    cells[r][c]=el;
+  }
+}
+
+// Build column zones
+for (let c=0; c<COLS; c++) {
+  const zone=document.createElement('div');
+  zone.className='col-zone';
+  const prev=document.createElement('div'); prev.className='drop-prev';
+  const hl=document.createElement('div');   hl.className='col-hl';
+  zone.append(prev,hl);
+  zone.addEventListener('click',()=>{
+    if (mode==='cpu' && currentPlayer===2) return;
+    handleDrop(c);
+  });
+  colZonesEl.appendChild(zone);
+}
+
+// ── Mode / difficulty wiring ─────────────────────────────────────────────────
+document.getElementById('mode-row').addEventListener('click',e=>{
+  const btn=e.target.closest('.pill'); if(!btn) return;
+  mode=btn.dataset.mode;
+  document.querySelectorAll('#mode-row .pill').forEach(b=>b.classList.toggle('active',b===btn));
+  diffRow.classList.toggle('show', mode==='cpu');
+  p2Label.textContent = mode==='cpu' ? 'CPU' : 'PLAYER 2';
+  p2Ind.textContent   = mode==='cpu' ? 'THINKING...' : 'YOUR TURN';
+});
+
+document.getElementById('diff-row').addEventListener('click',e=>{
+  const btn=e.target.closest('.pill'); if(!btn) return;
+  difficulty=btn.dataset.diff;
+  document.querySelectorAll('#diff-row .pill').forEach(b=>b.classList.toggle('active',b===btn));
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+function initBoard() {
+  board=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  currentPlayer=1; gameOver=false; cpuThinking=false;
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) cells[r][c].className='cell';
+  boardEl.className='board';
+  colZonesEl.className='col-zones turn-p1';
+  overlay.classList.add('hidden');
+  updateStatus(); updatePanels();
+}
+
+// ── Core drop ────────────────────────────────────────────────────────────────
+function placeDisc(col, player, b=board, visual=true) {
+  for (let r=0;r<ROWS;r++) {
+    if (b[r][col]===0) {
+      b[r][col]=player;
+      if (visual && b===board) {
+        const cell=cells[r][col];
+        cell.classList.add(player===1?'p1':'p2','dropping');
+        cell.addEventListener('animationend',()=>cell.classList.remove('dropping'),{once:true});
+      }
+      return r;
+    }
+  }
+  return -1;
+}
+
+function handleDrop(col) {
+  if (gameOver||cpuThinking) return;
+  if (board[ROWS-1][col]!==0) return;
+  const row=placeDisc(col, currentPlayer);
+  if (row===-1) return;
+  afterMove(row, col, currentPlayer);
+}
+
+function afterMove(row, col, player) {
+  const win=checkWin(board, row, col, player);
+  const full=isFull(board);
+  if (win) {
+    endGame('win', player, win);
+  } else if (full) {
+    endGame('draw');
+  } else {
+    currentPlayer = currentPlayer===1 ? 2 : 1;
+    colZonesEl.className=`col-zones turn-p${currentPlayer}`;
+    boardEl.className=`board glow-p${currentPlayer}`;
+    updateStatus(); updatePanels();
+    if (mode==='cpu' && currentPlayer===2) scheduleCPU();
+  }
+}
+
+// ── End game ─────────────────────────────────────────────────────────────────
+function endGame(result, winner, winLine) {
+  gameOver=true;
+  colZonesEl.className='col-zones blocked';
+  if (result==='win') {
+    scores[winner]++;
+    scoreEls[winner].textContent=scores[winner];
+    winLine.forEach(([r,c])=>cells[r][c].classList.add('win'));
+    boardEl.className='board glow-win';
+    const name = winner===1 ? 'PLAYER 1' : (mode==='cpu'?'CPU':'PLAYER 2');
+    const color= winner===1 ? 'var(--p1)' : 'var(--p2)';
+    const sub  = mode==='cpu' ? (winner===1?'YOU WON! 🎉':'CPU WINS...') : 'FOUR IN A ROW!';
+    statusEl.className='status win';
+    statusEl.textContent=name+' WINS!';
+    setTimeout(()=>showEndOverlay(`<span style="color:${color}">${name} WINS!</span>`, sub), 700);
+  } else {
+    draws++; drawsRowEl.textContent=`DRAWS: ${draws}`;
+    boardEl.className='board glow-draw';
+    statusEl.className='status draw'; statusEl.textContent='DRAW!';
+    setTimeout(()=>showEndOverlay(`<span style="color:var(--yellow)">DRAW!</span>`,'NO MOVES LEFT'),400);
+  }
+}
+
+function showEndOverlay(title, sub) {
+  document.getElementById('ov-title').innerHTML=title;
+  const p2n=mode==='cpu'?'CPU':'P2';
+  document.getElementById('ov-sub').innerHTML=`${sub}<br><br>SCORES &nbsp;P1: ${scores[1]} &nbsp;·&nbsp; ${p2n}: ${scores[2]}`;
+  const btnRow=overlay.querySelector('.btn-row');
+  btnRow.innerHTML=`<button class="btn primary" id="ov-again">▶ PLAY AGAIN</button><button class="btn secondary" id="ov-reset">RESET SCORES</button>`;
+  document.getElementById('ov-again').addEventListener('click',initBoard);
+  document.getElementById('ov-reset').addEventListener('click',()=>{
+    scores={1:0,2:0}; draws=0;
+    scoreEls[1].textContent=0; scoreEls[2].textContent=0;
+    drawsRowEl.textContent='DRAWS: 0'; initBoard();
+  });
+  overlay.classList.remove('hidden');
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function updateStatus() {
+  if (mode==='cpu' && currentPlayer===2) return;
+  const name=currentPlayer===1?'PLAYER 1':(mode==='cpu'?'CPU':'PLAYER 2');
+  statusEl.className=`status p${currentPlayer}-turn`;
+  statusEl.textContent=`${name}'S TURN`;
+}
+function updatePanels() {
+  panelEls[1].className=`player-panel p1${currentPlayer===1?' active-p1':''}`;
+  panelEls[2].className=`player-panel p2${currentPlayer===2?' active-p2':''}`;
+}
+
+// ── Win detection ─────────────────────────────────────────────────────────────
+function checkWin(b, row, col, player) {
+  const dirs=[[0,1],[1,0],[1,1],[1,-1]];
+  for (const [dr,dc] of dirs) {
+    const line=[[row,col]];
+    for (let i=1;i<4;i++){const r=row+dr*i,c=col+dc*i; if(r>=0&&r<ROWS&&c>=0&&c<COLS&&b[r][c]===player) line.push([r,c]); else break;}
+    for (let i=1;i<4;i++){const r=row-dr*i,c=col-dc*i; if(r>=0&&r<ROWS&&c>=0&&c<COLS&&b[r][c]===player) line.push([r,c]); else break;}
+    if (line.length>=4) return line;
+  }
+  return null;
+}
+
+function checkWinFast(b, player) {
+  // Horizontal
+  for (let r=0;r<ROWS;r++) for (let c=0;c<=COLS-4;c++) if(b[r][c]===player&&b[r][c+1]===player&&b[r][c+2]===player&&b[r][c+3]===player) return true;
+  // Vertical
+  for (let c=0;c<COLS;c++) for (let r=0;r<=ROWS-4;r++) if(b[r][c]===player&&b[r+1][c]===player&&b[r+2][c]===player&&b[r+3][c]===player) return true;
+  // Diag \
+  for (let r=0;r<=ROWS-4;r++) for (let c=0;c<=COLS-4;c++) if(b[r][c]===player&&b[r+1][c+1]===player&&b[r+2][c+2]===player&&b[r+3][c+3]===player) return true;
+  // Diag /
+  for (let r=3;r<ROWS;r++) for (let c=0;c<=COLS-4;c++) if(b[r][c]===player&&b[r-1][c+1]===player&&b[r-2][c+2]===player&&b[r-3][c+3]===player) return true;
+  return false;
+}
+
+function isFull(b) { return b[ROWS-1].every(v=>v!==0); }
+
+function validCols(b) { return COL_ORDER.filter(c=>b[ROWS-1][c]===0); }
+
+function cloneBoard(b) { return b.map(r=>[...r]); }
+
+function dropOnClone(b, col, player) {
+  const nb=cloneBoard(b);
+  for (let r=0;r<ROWS;r++) { if(nb[r][col]===0){nb[r][col]=player; return nb;} }
+  return null;
+}
+
+// ── Heuristic ─────────────────────────────────────────────────────────────────
+function scoreWindow(w, p) {
+  const opp=p===2?1:2;
+  const pc=w.filter(v=>v===p).length, ec=w.filter(v=>v===0).length, oc=w.filter(v=>v===opp).length;
+  if(pc===4) return 1000;
+  if(pc===3&&ec===1) return 5;
+  if(pc===2&&ec===2) return 2;
+  if(oc===3&&ec===1) return -4;
+  return 0;
+}
+
+function heuristic(b, p) {
+  let s=0;
+  // Centre preference
+  for (let r=0;r<ROWS;r++) if(b[r][3]===p) s+=3;
+  // Horizontal windows
+  for (let r=0;r<ROWS;r++) for (let c=0;c<=COLS-4;c++) s+=scoreWindow([b[r][c],b[r][c+1],b[r][c+2],b[r][c+3]],p);
+  // Vertical
+  for (let c=0;c<COLS;c++) for (let r=0;r<=ROWS-4;r++) s+=scoreWindow([b[r][c],b[r+1][c],b[r+2][c],b[r+3][c]],p);
+  // Diag \
+  for (let r=0;r<=ROWS-4;r++) for (let c=0;c<=COLS-4;c++) s+=scoreWindow([b[r][c],b[r+1][c+1],b[r+2][c+2],b[r+3][c+3]],p);
+  // Diag /
+  for (let r=3;r<ROWS;r++) for (let c=0;c<=COLS-4;c++) s+=scoreWindow([b[r][c],b[r-1][c+1],b[r-2][c+2],b[r-3][c+3]],p);
+  return s;
+}
+
+// ── Minimax ───────────────────────────────────────────────────────────────────
+function minimax(b, depth, alpha, beta, maxPlayer) {
+  const valid=validCols(b);
+  if (checkWinFast(b,2)) return {score: 100000+depth};
+  if (checkWinFast(b,1)) return {score:-100000-depth};
+  if (!valid.length || depth===0) return {score: heuristic(b,2)};
+
+  if (maxPlayer) {
+    let best={score:-Infinity, col:valid[0]};
+    for (const col of valid) {
+      const res=minimax(dropOnClone(b,col,2), depth-1, alpha, beta, false);
+      if(res.score>best.score) best={score:res.score,col};
+      alpha=Math.max(alpha,best.score);
+      if(alpha>=beta) break;
+    }
+    return best;
+  } else {
+    let best={score:Infinity, col:valid[0]};
+    for (const col of valid) {
+      const res=minimax(dropOnClone(b,col,1), depth-1, alpha, beta, true);
+      if(res.score<best.score) best={score:res.score,col};
+      beta=Math.min(beta,best.score);
+      if(alpha>=beta) break;
+    }
+    return best;
+  }
+}
+
+// ── CPU decision ─────────────────────────────────────────────────────────────
+function cpuChoose() {
+  const valid=validCols(board);
+
+  if (difficulty==='easy') {
+    // Always take immediate win
+    for (const col of valid) { const nb=dropOnClone(board,col,2); if(checkWinFast(nb,2)) return col; }
+    // 35% chance to block player's win
+    if (Math.random()<0.35) {
+      for (const col of valid) { const nb=dropOnClone(board,col,1); if(checkWinFast(nb,1)) return col; }
+    }
+    // Random
+    return valid[Math.floor(Math.random()*valid.length)];
+  }
+
+  if (difficulty==='medium') {
+    // Always win
+    for (const col of valid) { const nb=dropOnClone(board,col,2); if(checkWinFast(nb,2)) return col; }
+    // Always block
+    for (const col of valid) { const nb=dropOnClone(board,col,1); if(checkWinFast(nb,1)) return col; }
+    // Light heuristic + noise
+    const scored=valid.map(col=>({col, s:heuristic(dropOnClone(board,col,2),2)+(Math.random()*6)}));
+    scored.sort((a,b)=>b.s-a.s);
+    return scored[0].col;
+  }
+
+  // Hard — minimax depth 7
+  return minimax(board, 7, -Infinity, Infinity, true).col;
+}
+
+function scheduleCPU() {
+  cpuThinking=true;
+  colZonesEl.classList.add('blocked');
+  statusEl.className='status thinking';
+  statusEl.textContent='CPU THINKING...';
+  const delay = difficulty==='hard'?600:difficulty==='medium'?400:250;
+  setTimeout(()=>{
+    if (gameOver) return;
+    const col=cpuChoose();
+    cpuThinking=false;
+    colZonesEl.classList.remove('blocked');
+    if (board[ROWS-1][col]!==0) return; // shouldn't happen
+    const row=placeDisc(col,2);
+    afterMove(row,col,2);
+  }, delay);
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+document.getElementById('start-btn').addEventListener('click',initBoard);
+document.getElementById('reset-btn').addEventListener('click',initBoard);
+document.getElementById('scores-btn').addEventListener('click',()=>{
+  scores={1:0,2:0}; draws=0;
+  scoreEls[1].textContent=0; scoreEls[2].textContent=0;
+  drawsRowEl.textContent='DRAWS: 0';
+});
+
+document.addEventListener('keydown',e=>{
+  if(gameOver||cpuThinking) return;
+  if(mode==='cpu'&&currentPlayer===2) return;
+  const n=parseInt(e.key);
+  if(n>=1&&n<=7) handleDrop(n-1);
+});
+
+updatePanels();
+</script>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+</body>
+</html>
