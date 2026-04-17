@@ -249,8 +249,8 @@ function tick(lv, CELL) {
     if (head.x < 0 || head.x >= lv.gridW || head.y < 0 || head.y >= lv.gridH) { die(lv); return; }
   }
 
-  // Self collision
-  if (snake.some(s => s.x === head.x && s.y === head.y)) { die(lv); return; }
+  // Self collision — exclude tail (last segment) since it moves away this tick
+  if (snake.slice(0, snake.length - 1).some(s => s.x === head.x && s.y === head.y)) { die(lv); return; }
 
   // Obstacle collision
   if (obstacles.some(o => o.x === head.x && o.y === head.y)) { die(lv); return; }
