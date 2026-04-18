@@ -66,7 +66,7 @@
 <body>
 <div class="page">
   <nav class="nav">
-    <a class="back-btn" href="arcade.html">ARCADE</a>
+    <a class="back-btn" href="index.html">ARCADE</a>
     <span class="game-label">GAME 06</span>
   </nav>
   <h1>WHACK-A-MOLE</h1>
@@ -92,7 +92,7 @@
 
 <script>
   // LB safety shim - no-op if leaderboard.js failed to load
-  if(typeof LB === 'undefined') window.LB = { submit:(_g,_s,_l,cb)=>{ if(cb) cb(); }, show:()=>{}, puzzleScore:()=>0, memoryScore:()=>0, reactionScore:()=>0 };
+  if(typeof LB==='undefined') window.LB={submit:(_g,_s,_l,cb)=>{if(cb)cb();},show:()=>{},fetchEntries:()=>Promise.resolve({entries:[],online:false}),FB_ON:false,puzzleScore:(m,s,c)=>Math.max(1,Math.round(10000/(m*.6+Math.max(1,s)*.4)*(c<=3?1:c<=5?2.5:5))),memoryScore:(p,f,s)=>Math.max(1,Math.round(p*1200/(f*.55+Math.max(1,s)*.45))),reactionScore:(a)=>Math.max(1,Math.round(50000/a))};
 const TOTAL_TIME = 30;
 const HOLES = 9;
 const MOLE_EMOJIS = ['🐭','🐹','🐻','🦔','🐰'];
