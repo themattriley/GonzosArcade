@@ -209,31 +209,45 @@ function throwPaper(){
 
   const {sx:px, sy:py} = roadToScreen(0, playerPerp);
 
-  // Find nearest upcoming house
-  let target=null, bestD=Infinity;
+  // Only aim at subscriber houses that still need a paper
+  // Prefer houses on the same side of the road as the player
+  let target=null, bestScore=Infinity;
   for(const o of objects){
-    if(o.type!=='house'||o.hit) continue;
+    if(o.type!=='house'||o.hit||!o.subscriber) continue;
     const eff=o.baseDist-scrollDist;
     if(eff<5||eff>420) continue;
     const {sx,sy}=roadToScreen(eff,o.rperp);
-    const d=eff*0.8+Math.abs(o.rperp)*0.2;
-    if(d<bestD){bestD=d; target={sx,sy};}
+    const screenDist=Math.hypot(sx-px, sy-py);
+    // Heavy penalty for houses on the opposite side of the road
+    const playerSide = playerPerp <= 0 ? 'left' : 'right';
+    const sidePenalty = o.side !== playerSide ? 300 : 0;
+    const score = screenDist + sidePenalty;
+    if(score<bestScore){bestScore=score; target={sx,sy};}
   }
   if(!target){
-    // Default: throw toward left-side house zone ahead
-    const t=roadToScreen(220,-(ROAD_HALF+70));
+    // No subscriber houses nearby — throw toward same side as player
+    const goLeft = playerPerp <= 0;
+    const t=roadToScreen(200, goLeft ? -(ROAD_HALF+70) : (ROAD_HALF+70));
     target={sx:t.sx, sy:t.sy};
   }
 
-  // Aim paper at target using projectile physics
-  const dx=target.sx-px, dy=target.sy-(py-12);
-  const G=0.055, vy0=-5.8;
-  const a=0.5*G, b=vy0, c=-dy;
-  const disc=b*b-4*a*c;
-  let tf = disc>=0 ? (-b-Math.sqrt(disc))/(2*a) : 32;
-  tf=Math.max(18,Math.min(65,tf));
+  // Aim directly at target with fixed travel time
+  // Use a consistent flight time so paper arcs naturally
+  const dx=target.sx-px;
+  const dy=target.sy-(py-12);
+  const dist=Math.hypot(dx,dy);
 
-  papers.push({sx:px, sy:py-12, vsx:dx/tf, vsy:vy0, rot:0});
+  // Scale flight time with distance so speed feels consistent
+  const PAPER_SPEED = 9;
+  const tf = Math.max(16, Math.min(60, dist/PAPER_SPEED));
+
+  const G=0.055;
+  // vsy needed to reach dy in tf frames accounting for gravity
+  // dy = vsy*tf + 0.5*G*tf^2  =>  vsy = (dy - 0.5*G*tf^2) / tf
+  const vsy = (dy - 0.5*G*tf*tf) / tf;
+  const vsx = dx / tf;
+
+  papers.push({sx:px, sy:py-12, vsx, vsy, rot:0});
   papersLeft--;
   throwCooldown=15;
   updateHUD();
