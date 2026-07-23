@@ -1,0 +1,1933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Solitaire</title>
+<link href="https://fonts.googleapis.com/css2?family=Ultra&family=Josefin+Sans:wght@300;400;600&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --felt: #1a2e1a;
+  --felt-light: #1f3a22;
+  --felt-dark: #0e1a0f;
+  --gold: #c9a84c;
+  --gold-light: #e8c96a;
+  --gold-dim: rgba(201,168,76,0.4);
+  --card-w: 80px;
+  --card-h: 112px;
+  --card-r: 6px;
+  --sepia-border: #b89a62;
+  --deco-red: #8b1a1a;
+  --deco-black: #160e06;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+body {
+  min-height: 100vh;
+  font-family: 'Josefin Sans', sans-serif;
+  overflow-x: hidden;
+  background: #3a8c3f;
+  background-image:
+    radial-gradient(ellipse at 50% 35%, #4aaa50 0%, #3a8c3f 45%, #2d7032 100%);
+}
+
+header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px 12px;
+  /* Dark lacquered wood header */
+  background: linear-gradient(180deg, #1a120a 0%, #231808 60%, #1c1308 100%);
+  border-bottom: 2px solid #6a4a20;
+  box-shadow:
+    0 1px 0 rgba(201,168,76,0.25),
+    0 4px 20px rgba(0,0,0,0.5);
+}
+
+/* Subtle gold trim line at top of header */
+header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,168,76,0.6) 30%, rgba(201,168,76,0.8) 50%, rgba(201,168,76,0.6) 70%, transparent);
+}
+
+.title {
+  font-family: 'Cinzel', serif;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 8px;
+  color: var(--gold);
+  text-shadow:
+    0 1px 0 rgba(0,0,0,0.8),
+    0 0 20px rgba(201,168,76,0.35),
+    0 0 40px rgba(201,168,76,0.15);
+}
+
+.stats {
+  display: flex;
+  gap: 28px;
+  align-items: center;
+}
+
+.stat { text-align: center; }
+
+.stat-label {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 8px;
+  color: rgba(201,168,76,0.45);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  font-family: 'Cinzel', serif;
+  font-size: 15px;
+  color: var(--gold);
+  letter-spacing: 1px;
+  text-shadow: 0 0 12px rgba(201,168,76,0.3);
+}
+
+.btn {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #1a1208;
+  background: linear-gradient(180deg, #e8c96a 0%, #c9a84c 50%, #b08830 100%);
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(0,0,0,0.3);
+  padding: 9px 20px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.15) inset;
+}
+.btn:hover { background: linear-gradient(180deg, #f0d478 0%, #d4b054 50%, #b89038 100%); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+.btn:active { transform: translateY(0); box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+
+.btn-ghost {
+  background: transparent;
+  color: rgba(201,168,76,0.55);
+  border: 1px solid rgba(201,168,76,0.25);
+  border-top: 1px solid rgba(201,168,76,0.25);
+  box-shadow: none;
+  border-radius: 3px;
+}
+.btn-ghost:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.06); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+#game {
+  position: relative;
+  z-index: 1;
+  padding: 22px 18px;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.top-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.spacer { flex: 1; }
+
+/* ── CARD SLOT ── */
+.card-slot {
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: var(--card-r);
+  position: relative;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  /* Recessed felt pocket */
+  background: rgba(0,0,0,0.18);
+  border: 1.5px solid rgba(201,168,76,0.18);
+  box-shadow:
+    inset 0 2px 8px rgba(0,0,0,0.4),
+    inset 0 1px 3px rgba(0,0,0,0.3),
+    0 1px 0 rgba(255,255,255,0.04);
+}
+
+.card-slot.drag-over {
+  border-color: rgba(201,168,76,0.6);
+  background: rgba(201,168,76,0.06);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.3), 0 0 12px rgba(201,168,76,0.2);
+}
+
+.card-slot .slot-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cinzel', serif;
+  font-size: 22px;
+  color: rgba(201,168,76,0.18);
+  pointer-events: none;
+}
+
+/* ── CARD ── */
+.card {
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: var(--card-r);
+  position: absolute;
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.25,0.8,0.25,1), box-shadow 0.18s;
+  will-change: transform;
+  touch-action: none;
+  /* 4-layer shadow: crisp base, soft mid, ambient, colour tint */
+  box-shadow:
+    0 1px 1px rgba(0,0,0,0.35),
+    0 3px 6px rgba(0,0,0,0.28),
+    0 8px 16px rgba(0,0,0,0.18),
+    0 16px 28px rgba(0,0,0,0.10),
+    0 1px 0 rgba(255,255,255,0.06);
+}
+
+.card:hover:not(.face-down):not(.dragging) {
+  transform: translateY(-7px) perspective(600px) rotateX(4deg) rotate(-0.3deg);
+  box-shadow:
+    0 2px 2px rgba(0,0,0,0.30),
+    0 6px 12px rgba(0,0,0,0.26),
+    0 16px 28px rgba(0,0,0,0.18),
+    0 28px 44px rgba(0,0,0,0.12),
+    0 1px 0 rgba(255,255,255,0.06);
+}
+
+.card.dragging {
+  opacity: 0.96;
+  z-index: 1000;
+  cursor: grabbing;
+  box-shadow:
+    0 8px 16px rgba(0,0,0,0.40),
+    0 20px 40px rgba(0,0,0,0.30),
+    0 40px 60px rgba(0,0,0,0.18);
+  pointer-events: none;
+}
+
+/* Face-down */
+.card.face-down .card-front { display: none; }
+.card.face-down .card-back { display: flex; }
+
+/* Face-up */
+.card:not(.face-down) .card-front { display: flex; }
+.card:not(.face-down) .card-back { display: none; }
+
+/* ── CARD BACK ── */
+.card-back {
+  width: 100%; height: 100%;
+  border-radius: var(--card-r);
+  display: none;
+  position: relative;
+  overflow: hidden;
+  background: #09201f;
+}
+
+/* ── CARD ── */
+.card {
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: 10px;
+  position: absolute;
+  cursor: pointer;
+  transition: box-shadow 0.18s;
+  will-change: transform;
+  touch-action: none;
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.22),
+    0 4px 10px rgba(0,0,0,0.18),
+    0 10px 20px rgba(0,0,0,0.10);
+}
+
+.card:hover:not(.face-down):not(.dragging) {
+  transform: translateY(-5px);
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.22),
+    0 8px 18px rgba(0,0,0,0.20),
+    0 20px 36px rgba(0,0,0,0.12);
+}
+
+/* Suppress hover lift while any drag is in progress */
+body.is-dragging .card:hover {
+  transform: none;
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.22),
+    0 4px 10px rgba(0,0,0,0.18),
+    0 10px 20px rgba(0,0,0,0.10);
+}
+
+.card.dragging {
+  opacity: 0.95;
+  z-index: 1000;
+  cursor: grabbing;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.40), 0 30px 50px rgba(0,0,0,0.22);
+  pointer-events: none;
+}
+
+/* Face-down */
+.card.face-down .card-front { display: none; }
+.card.face-down .card-back  { display: block; }
+
+/* Face-up */
+.card:not(.face-down) .card-front { display: flex; }
+.card:not(.face-down) .card-back  { display: none; }
+
+/* ── CARD BACK ── */
+.card-back {
+  width: 100%; height: 100%;
+  border-radius: 10px;
+  display: none;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── CARD FACE ── */
+.card-front {
+  width: 100%; height: 100%;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  display: none;
+  position: relative;
+  overflow: hidden;
+  flex-direction: column;
+}
+
+.card.red   .card-front { color: #d0161a; }
+.card.black .card-front { color: #111111; }
+
+/* ── TOP-LEFT CORNER INDEX ── */
+.card-corner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  z-index: 4;
+  padding: 7px 0 0 8px;
+  line-height: 1;
+  gap: 1px;
+}
+.card-corner.top    { top: 0; left: 0; }
+.card-corner.bottom { bottom: 0; right: 0; transform: rotate(180deg); }
+
+.card-rank {
+  font-family: 'Ultra', serif;
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+}
+.card-rank.wide { font-size: 17px; }
+
+/* ── CENTER PIP ── */
+.card-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* ── FACE CARD ILLUSTRATION AREA ── */
+.card-face-art {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* ── TABLEAU ── */
+.tableau {
+  display: flex;
+  gap: 10px;
+}
+
+.tableau-col {
+  position: relative;
+  width: var(--card-w);
+  flex-shrink: 0;
+}
+
+.tableau-col .card-slot {
+  position: relative;
+}
+
+/* ── STOCK & WASTE ── */
+#stock-pile, #waste-pile {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  flex-shrink: 0;
+}
+
+#stock-pile .card-slot {
+  cursor: pointer;
+  position: absolute;
+  inset: 0;
+}
+
+#stock-pile .card-slot:hover {
+  border-color: rgba(201,168,76,0.5);
+}
+
+.recycle-icon {
+  font-size: 28px;
+  color: rgba(201,168,76,0.25);
+}
+
+/* ── FOUNDATIONS ── */
+.foundation-area {
+  display: flex;
+  gap: 10px;
+}
+
+.foundation {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  flex-shrink: 0;
+}
+
+.foundation .card-slot {
+  position: absolute;
+  inset: 0;
+}
+
+/* ── DRAG GHOST ── */
+#drag-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  display: none;
+  transform-origin: top left;
+}
+#drag-ghost * { pointer-events: none; }
+
+/* ── WIN OVERLAY ── */
+#win-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(3px);
+}
+#win-overlay.show { display: flex; }
+
+#fireworks-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5001;
+}
+
+#waterfall-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5000;
+}
+
+#win-content {
+  position: relative;
+  z-index: 5002;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+/* ── Happy Face ── */
+#win-face {
+  animation: faceIn 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  transform-origin: center;
+}
+@keyframes faceIn {
+  0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0deg);  opacity: 1; }
+}
+#win-face svg {
+  animation: faceBob 1.8s ease-in-out infinite;
+  filter: drop-shadow(0 8px 24px rgba(0,0,0,0.5));
+}
+@keyframes faceBob {
+  0%,100% { transform: translateY(0) rotate(-2deg); }
+  50%      { transform: translateY(-10px) rotate(2deg); }
+}
+/* Blinking eyes */
+.win-eye {
+  animation: blink 3.5s ease-in-out infinite;
+  transform-origin: center;
+}
+@keyframes blink {
+  0%,90%,100% { transform: scaleY(1); }
+  95%          { transform: scaleY(0.1); }
+}
+
+/* ── Win Text ── */
+.win-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(32px, 8vw, 58px);
+  font-weight: 700;
+  color: #FFD700;
+  letter-spacing: 6px;
+  text-shadow:
+    0 2px 0 #b8860b,
+    0 0 30px rgba(255,215,0,0.8),
+    0 0 60px rgba(255,215,0,0.4);
+  animation: titlePop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.4s both, winPulse 2s ease 1s infinite;
+}
+@keyframes titlePop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+@keyframes winPulse {
+  0%,100% { text-shadow: 0 2px 0 #b8860b, 0 0 30px rgba(255,215,0,0.8); }
+  50%      { text-shadow: 0 2px 0 #b8860b, 0 0 60px rgba(255,215,0,1), 0 0 100px rgba(255,165,0,0.5); }
+}
+
+.win-stats {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 15px;
+  color: rgba(255,240,180,0.85);
+  letter-spacing: 3px;
+  text-align: center;
+  line-height: 2;
+  text-transform: uppercase;
+  animation: fadeUp 0.5s ease 0.7s both;
+}
+@keyframes fadeUp {
+  0%   { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── FLIP ANIMATION ── */
+@keyframes flipIn {
+  0% { transform: rotateY(90deg); opacity: 0; }
+  100% { transform: rotateY(0deg); opacity: 1; }
+}
+
+.flip-anim { animation: flipIn 0.2s ease-out; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 580px) {
+  :root {
+    /* Fluid card width: 7 cols + 6 gaps of 4px, with 12px padding each side */
+    /* cardW = (100vw - 24px - 24px - 6*4px) / 7 = (100vw - 72px) / 7        */
+    --card-w: calc((100vw - 72px) / 7);
+    --card-h: calc(var(--card-w) * 1.42);
+    --card-r: 4px;
+  }
+  .card-rank { font-size: 11px; }
+  .card-rank.wide { font-size: 9px; }
+  #game { padding: 10px 12px; }
+  .top-row { gap: 4px; }
+  .tableau { gap: 4px; }
+  .foundation-area { gap: 4px; }
+  .title { font-size: 13px; letter-spacing: 3px; }
+  header { padding: 10px 12px 8px; }
+  .btn { font-size: 8px; padding: 6px 12px; }
+  /* Touch has no persistent hover — disable lift entirely on mobile */
+  .card:hover { transform: none !important; box-shadow: 0 1px 2px rgba(0,0,0,0.22), 0 4px 10px rgba(0,0,0,0.18), 0 10px 20px rgba(0,0,0,0.10) !important; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">SOLITAIRE</div>
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Score</div>
+      <div class="stat-value" id="score-display">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Moves</div>
+      <div class="stat-value" id="moves-display">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Time</div>
+      <div class="stat-value" id="time-display">0:00</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-ghost" id="undo-btn">UNDO</button>
+    <button class="btn" id="new-btn">NEW GAME</button>
+  </div>
+</header>
+
+<div id="game">
+  <div class="top-row">
+    <!-- Stock -->
+    <div id="stock-pile">
+      <div class="card-slot" id="stock-slot">
+        <div class="slot-label recycle-icon">↺</div>
+      </div>
+    </div>
+    <!-- Waste -->
+    <div id="waste-pile">
+      <div class="card-slot" id="waste-slot"></div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <!-- Foundations -->
+    <div class="foundation-area">
+      <div class="foundation" id="f0"><div class="card-slot"><div class="slot-label">♠</div></div></div>
+      <div class="foundation" id="f1"><div class="card-slot"><div class="slot-label">♥</div></div></div>
+      <div class="foundation" id="f2"><div class="card-slot"><div class="slot-label">♣</div></div></div>
+      <div class="foundation" id="f3"><div class="card-slot"><div class="slot-label">♦</div></div></div>
+    </div>
+  </div>
+
+  <!-- Tableau -->
+  <div class="tableau" id="tableau">
+    <div class="tableau-col" id="t0"><div class="card-slot"></div></div>
+    <div class="tableau-col" id="t1"><div class="card-slot"></div></div>
+    <div class="tableau-col" id="t2"><div class="card-slot"></div></div>
+    <div class="tableau-col" id="t3"><div class="card-slot"></div></div>
+    <div class="tableau-col" id="t4"><div class="card-slot"></div></div>
+    <div class="tableau-col" id="t5"><div class="card-slot"></div></div>
+    <div class="tableau-col" id="t6"><div class="card-slot"></div></div>
+  </div>
+</div>
+
+<!-- Drag ghost container -->
+<div id="drag-ghost"></div>
+
+<!-- Win overlay -->
+<canvas id="fireworks-canvas"></canvas>
+<canvas id="waterfall-canvas"></canvas>
+
+<div id="win-overlay">
+  <div id="win-content">
+    <div id="win-face">
+      <svg viewBox="0 0 160 160" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
+        <!-- Face shadow -->
+        <ellipse cx="80" cy="152" rx="52" ry="10" fill="rgba(0,0,0,0.25)"/>
+        <!-- Face -->
+        <circle cx="80" cy="78" r="70" fill="#FFD700"/>
+        <circle cx="80" cy="78" r="70" fill="url(#faceGrad)"/>
+        <defs>
+          <radialGradient id="faceGrad" cx="38%" cy="28%" r="65%">
+            <stop offset="0%" stop-color="rgba(255,255,220,0.55)"/>
+            <stop offset="100%" stop-color="rgba(200,140,0,0.25)"/>
+          </radialGradient>
+        </defs>
+        <!-- Rosy cheeks -->
+        <circle cx="30" cy="100" r="18" fill="#ff8888" opacity="0.35"/>
+        <circle cx="130" cy="100" r="18" fill="#ff8888" opacity="0.35"/>
+        <!-- Left eye (happy squint arc) -->
+        <g class="win-eye">
+          <path d="M30 72 Q46 56 62 72" stroke="#3a2000" stroke-width="5" fill="none" stroke-linecap="round"/>
+        </g>
+        <!-- Right eye -->
+        <g class="win-eye" style="animation-delay:0.08s">
+          <path d="M98 72 Q114 56 130 72" stroke="#3a2000" stroke-width="5" fill="none" stroke-linecap="round"/>
+        </g>
+        <!-- Big smile -->
+        <path d="M28 104 Q80 152 132 104" stroke="#3a2000" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <!-- Teeth fill -->
+        <path d="M28 104 Q80 152 132 104 Q80 132 28 104Z" fill="white" opacity="0.92"/>
+        <!-- Tongue -->
+        <ellipse cx="80" cy="136" rx="20" ry="11" fill="#ff7099"/>
+        <!-- Sparkle stars -->
+        <text x="148" y="38" font-size="22" fill="#fff" opacity="0.9">✦</text>
+        <text x="0" y="42" font-size="18" fill="#fff" opacity="0.8">✦</text>
+        <text x="136" y="148" font-size="14" fill="#fff" opacity="0.7">✦</text>
+      </svg>
+    </div>
+    <div class="win-title">YOU WIN!</div>
+    <div class="win-stats" id="win-stats"></div>
+    <button class="btn" id="win-new-btn" style="animation: fadeUp 0.5s ease 1s both">DEAL AGAIN</button>
+  </div>
+</div>
+
+<script>
+// LB safety shim — works with or without leaderboard.js loaded
+if (!window.LB) window.LB = { submit: () => {} };
+
+// ── CONSTANTS ──────────────────────────────────────────────────────────────
+const SUITS    = ['♠','♥','♣','♦'];
+const SUIT_IDS = ['spades','hearts','clubs','diamonds'];
+const RANKS    = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const RED_SUITS  = new Set(['♥','♦']);
+const TABLEAU_OVERLAP_FACE_DOWN = 18; // px
+const TABLEAU_OVERLAP_FACE_UP   = 28; // px — will be set dynamically
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let stock=[], waste=[], foundations=[[],[],[],[]], tableau=[[],[],[],[],[],[],[]];
+let score=0, moves=0, seconds=0, timerID=null;
+let history=[]; // for undo
+let gameStarted=false;
+
+// ── CARD HELPERS ───────────────────────────────────────────────────────────
+function makeCard(suit, rank) {
+  return {
+    suit, rank,
+    rankIdx: RANKS.indexOf(rank),
+    isRed: RED_SUITS.has(suit),
+    faceUp: false,
+    id: suit + rank
+  };
+}
+
+function isRed(card)  { return card.isRed; }
+function isBlack(card){ return !card.isRed; }
+
+function canStackOnTableau(card, targetCard) {
+  // targetCard is top of column; card goes on top
+  if (!targetCard) return card.rank === 'K'; // empty col = only Kings
+  if (!targetCard.faceUp) return false;
+  return isRed(card) !== isRed(targetCard) && card.rankIdx === targetCard.rankIdx - 1;
+}
+
+function canStackOnFoundation(card, foundationPile) {
+  if (foundationPile.length === 0) return card.rank === 'A';
+  const top = foundationPile[foundationPile.length - 1];
+  return card.suit === top.suit && card.rankIdx === top.rankIdx + 1;
+}
+
+// ── DECK & DEAL ────────────────────────────────────────────────────────────
+function makeDeck() {
+  const deck = [];
+  for (const suit of SUITS)
+    for (const rank of RANKS)
+      deck.push(makeCard(suit, rank));
+  return deck;
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function newGame() {
+  stopTimer();
+  const deck = shuffle(makeDeck());
+  stock = []; waste = []; foundations = [[],[],[],[]]; tableau = [[],[],[],[],[],[],[]];
+  score = 0; moves = 0; seconds = 0; history = []; gameStarted = false;
+  updateHUD();
+  stopFireworks();
+  stopWaterfall();
+  document.getElementById('win-overlay').classList.remove('show');
+
+  // Deal tableau — col i gets i+1 cards
+  let di = 0;
+  for (let col = 0; col < 7; col++) {
+    for (let row = 0; row <= col; row++) {
+      const card = deck[di++];
+      card.faceUp = (row === col); // only top card face up
+      tableau[col].push(card);
+    }
+  }
+  // Rest to stock
+  while (di < 52) { const c = deck[di++]; c.faceUp = false; stock.push(c); }
+  stock.reverse(); // top of stock = last in array
+
+  render();
+}
+
+// ── UNDO ───────────────────────────────────────────────────────────────────
+function saveHistory() {
+  history.push({
+    stock: stock.map(c=>({...c})),
+    waste: waste.map(c=>({...c})),
+    foundations: foundations.map(f=>f.map(c=>({...c}))),
+    tableau: tableau.map(t=>t.map(c=>({...c}))),
+    score, moves
+  });
+  if (history.length > 40) history.shift();
+}
+
+function undo() {
+  if (history.length === 0) return;
+  const s = history.pop();
+  stock = s.stock; waste = s.waste; foundations = s.foundations; tableau = s.tableau;
+  score = s.score; moves = s.moves;
+  updateHUD(); render();
+}
+
+// ── STOCK CLICK ────────────────────────────────────────────────────────────
+function clickStock() {
+  saveHistory();
+  if (stock.length === 0) {
+    if (waste.length === 0) return;
+    stock = waste.reverse();
+    waste = [];
+    stock.forEach(c => c.faceUp = false);
+    score = Math.max(0, score - 100);
+  } else {
+    const card = stock.pop();
+    card.faceUp = true;
+    waste.push(card);
+    addScore(5);
+  }
+  moves++;
+  updateHUD(); render();
+  if (!gameStarted) startTimer();
+  // If stock just ran dry and all tableau cards are face-up, offer auto-complete
+  if (stock.length === 0 && waste.length === 0) {
+    const hasFaceDown = tableau.some(col => col.some(c => !c.faceUp));
+    if (!hasFaceDown) setTimeout(() => { if (!drag && !pendingDrag) autoComplete(); }, 300);
+  }
+}
+
+// ── MOVE VALIDATION ────────────────────────────────────────────────────────
+function tryMoveToFoundation(card, fromType, fromIdx, fromCardIdx) {
+  for (let fi = 0; fi < 4; fi++) {
+    if (canStackOnFoundation(card, foundations[fi])) {
+      saveHistory();
+      // Always re-find by ID to avoid stale index
+      const realIdx = findCardIndex(fromType, fromIdx, card.id);
+      if (realIdx === -1) return false;
+      removeCard(fromType, fromIdx, realIdx);
+      foundations[fi].push(card);
+      card.faceUp = true;
+      addScore(fromType === 'waste' ? 10 : 15);
+      moves++;
+      autoFlipTableau(fromIdx, fromType);
+      updateHUD(); render();
+      checkWin();
+      if (!gameStarted) startTimer();
+      return true;
+    }
+  }
+  return false;
+}
+
+function tryMoveToTableau(cards, fromType, fromIdx, fromCardIdx, toColIdx) {
+  if (!cards || cards.length === 0) return false;
+  if (typeof toColIdx !== 'number' || isNaN(toColIdx)) return false;
+  if (fromType === 'tableau' && fromIdx === toColIdx) return false;
+  const col = tableau[toColIdx];
+  if (!col) return false;
+  const topCard = col.length > 0 ? col[col.length - 1] : null;
+  if (!canStackOnTableau(cards[0], topCard)) return false;
+
+  // ── Validate BEFORE any mutation ──────────────────────────────────────
+  const realIdx = findCardIndex(fromType, fromIdx, cards[0].id);
+  if (realIdx === -1) return false;
+
+  let toMove;
+  if (fromType === 'tableau') {
+    if (!tableau[fromIdx] || realIdx >= tableau[fromIdx].length) return false;
+    toMove = tableau[fromIdx].slice(realIdx);
+  } else if (fromType === 'waste') {
+    if (!waste.length) return false;
+    toMove = [waste[waste.length - 1]];
+  } else if (fromType === 'foundation') {
+    if (!foundations[fromIdx] || !foundations[fromIdx].length) return false;
+    toMove = [foundations[fromIdx][foundations[fromIdx].length - 1]];
+  } else { return false; }
+  if (!toMove || toMove.length === 0) return false;
+
+  // ── Everything validated — safe to mutate ─────────────────────────────
+  saveHistory();
+  removeCards(fromType, fromIdx, realIdx, toMove.length);
+  toMove.forEach(c => col.push(c));
+  addScore(fromType === 'waste' ? 5 : 3);
+  moves++;
+  autoFlipTableau(fromIdx, fromType);
+  updateHUD(); render();
+  if (!gameStarted) startTimer();
+  return true;
+}
+
+function tryMoveToFoundation(card, fromType, fromIdx, fromCardIdx) {
+  if (!card) return false;
+  for (let fi = 0; fi < 4; fi++) {
+    if (!canStackOnFoundation(card, foundations[fi])) continue;
+
+    // ── Validate BEFORE any mutation ──────────────────────────────────
+    const realIdx = findCardIndex(fromType, fromIdx, card.id);
+    if (realIdx === -1) continue; // try next foundation rather than abort
+
+    // ── Everything validated — safe to mutate ─────────────────────────
+    saveHistory();
+    removeCard(fromType, fromIdx, realIdx);
+    foundations[fi].push(card);
+    card.faceUp = true;
+    addScore(fromType === 'waste' ? 10 : 15);
+    moves++;
+    autoFlipTableau(fromIdx, fromType);
+    updateHUD(); render();
+    checkWin();
+    if (!gameStarted) startTimer();
+    return true;
+  }
+  return false;
+}
+
+function findCardIndex(type, idx, cardId) {
+  if (!cardId) return -1;
+  if (type === 'tableau') {
+    if (!Array.isArray(tableau[idx])) return -1;
+    return tableau[idx].findIndex(c => c.id === cardId);
+  } else if (type === 'waste') {
+    const i = waste.findIndex(c => c.id === cardId);
+    return i !== -1 ? i : waste.length - 1;
+  } else if (type === 'foundation') {
+    if (!Array.isArray(foundations[idx])) return -1;
+    return foundations[idx].findIndex(c => c.id === cardId);
+  }
+  return -1;
+}
+
+function removeCard(type, idx, cardIdx) {
+  if (type === 'waste') { waste.splice(cardIdx, 1); }
+  else if (type === 'tableau') { tableau[idx].splice(cardIdx, 1); }
+  else if (type === 'foundation') { foundations[idx].splice(cardIdx, 1); }
+}
+
+function removeCards(type, idx, cardIdx, count) {
+  if (type === 'waste') { waste.splice(cardIdx, count); }
+  else if (type === 'tableau') { tableau[idx].splice(cardIdx, count); }
+  else if (type === 'foundation') { foundations[idx].splice(cardIdx, count); }
+}
+
+function autoFlipTableau(colIdx, type) {
+  if (type !== 'tableau') return;
+  const col = tableau[colIdx];
+  if (col.length > 0 && !col[col.length-1].faceUp) {
+    col[col.length-1].faceUp = true;
+    addScore(5);
+  }
+}
+
+// Defensive scan: flip ANY exposed face-down top card across ALL columns.
+// Called before every render so a missed flip never stays invisible.
+function flipAllExposed() {
+  for (let ci = 0; ci < 7; ci++) {
+    const col = tableau[ci];
+    if (col.length > 0 && !col[col.length - 1].faceUp) {
+      col[col.length - 1].faceUp = true;
+      addScore(5);
+    }
+  }
+}
+
+function render() {
+  flipAllExposed(); // ensure all revealed cards are face-up before drawing
+  renderStock();
+  renderWaste();
+  renderFoundations();
+  renderTableau();
+}
+
+function addScore(n) { score = Math.max(0, score + n); }
+
+// ── WIN CHECK ──────────────────────────────────────────────────────────────
+function checkWin() {
+  if (foundations.every(f => f.length === 13)) {
+    stopTimer();
+    const bonus = Math.max(0, 700000 - score * 10 - seconds * 2);
+    score += bonus;
+    updateHUD();
+    document.getElementById('win-stats').innerHTML =
+      `Score: ${score} &nbsp;·&nbsp; Moves: ${moves} &nbsp;·&nbsp; Time: ${formatTime(seconds)}`;
+    setTimeout(() => {
+      document.getElementById('win-overlay').classList.add('show');
+      startFireworks();
+      startWaterfall();
+      // Submit to leaderboard
+      if (window.LB) {
+        const label = `${formatTime(seconds)} · ${moves} moves`;
+        LB.submit('solitaire', score, label, () => {});
+      }
+    }, 400);
+  }
+}
+
+// ── TIMER ──────────────────────────────────────────────────────────────────
+function startTimer() {
+  gameStarted = true;
+  timerID = setInterval(() => {
+    if (drag || pendingDrag) return;
+    seconds++; updateHUD();
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerID); timerID = null;
+}
+
+function formatTime(s) {
+  return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+}
+
+function updateHUD() {
+  document.getElementById('score-display').textContent = score;
+  document.getElementById('moves-display').textContent = moves;
+  document.getElementById('time-display').textContent = formatTime(seconds);
+}
+
+// ── DRAG & DROP ────────────────────────────────────────────────────────────
+let drag = null;
+let pendingDrag = null; // waiting to see if mouse moves enough
+
+function startDrag(e, cards, fromType, fromIdx, fromCardIdx) {
+  const point = e.touches ? e.touches[0] : e;
+  // Store pending drag info — don't start until mouse moves 5px
+  pendingDrag = { cards, fromType, fromIdx, fromCardIdx,
+    startX: point.clientX, startY: point.clientY,
+    target: e.currentTarget };
+  document.addEventListener('mousemove', onPendingMove);
+  document.addEventListener('mouseup',   onPendingCancel);
+  document.addEventListener('touchmove', onPendingMove, {passive:false});
+  document.addEventListener('touchend',    onPendingCancel);
+  document.addEventListener('touchcancel', onPendingCancel);
+  // Don't preventDefault here — allow click/dblclick to fire on short taps
+}
+
+function onPendingMove(e) {
+  if (!pendingDrag) return;
+  const point = e.touches ? e.touches[0] : e;
+  const dx = point.clientX - pendingDrag.startX;
+  const dy = point.clientY - pendingDrag.startY;
+  const threshold = e.touches ? 6 : 3;
+  if (Math.hypot(dx, dy) > threshold) {
+    e.preventDefault();
+    const pd = pendingDrag; // save reference before clearing
+    clearPendingDrag();
+    activateDrag(e, pd);
+  }
+}
+
+function onPendingCancel() {
+  clearPendingDrag();
+}
+
+function clearPendingDrag() {
+  document.removeEventListener('mousemove', onPendingMove);
+  document.removeEventListener('mouseup',   onPendingCancel);
+  document.removeEventListener('touchmove', onPendingMove);
+  document.removeEventListener('touchend',    onPendingCancel);
+  document.removeEventListener('touchcancel', onPendingCancel);
+  pendingDrag = null;
+}
+
+function activateDrag(e, pd) {
+  const { cards, fromType, fromIdx, fromCardIdx, startX, startY } = pd;
+  const point = e.touches ? e.touches[0] : e;
+  const ghost = document.getElementById('drag-ghost');
+  ghost.innerHTML = '';
+  ghost.style.display = 'block';
+
+  const cardW = getCardW();
+  const cardH = getCardH();
+  const overlap = getOverlapFaceUp();
+  ghost.style.width = cardW + 'px';
+  ghost.style.height = (cardH + (cards.length-1)*overlap) + 'px';
+
+  cards.forEach((card, i) => {
+    const el = renderCardEl(card);
+    el.style.position = 'absolute';
+    el.style.top = (i * overlap) + 'px';
+    el.style.left = '0';
+    el.style.width = cardW + 'px';
+    el.style.height = cardH + 'px';
+    ghost.appendChild(el);
+  });
+
+  const offsetX = startX - (pd.target ? pd.target.getBoundingClientRect().left : 0);
+  const offsetY = startY - (pd.target ? pd.target.getBoundingClientRect().top : 0);
+
+  ghost.style.left = (point.clientX - offsetX) + 'px';
+  ghost.style.top  = (point.clientY - offsetY) + 'px';
+
+  drag = { cards, fromType, fromIdx, fromCardIdx, ghost, offsetX, offsetY };
+  document.body.classList.add('is-dragging');
+
+  // Hide the original card elements in the tableau so the card below shows through
+  cards.forEach(card => {
+    const el = document.querySelector(`[data-card-id="${card.id}"]`);
+    if (el) el.style.visibility = 'hidden';
+  });
+
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup',   onDragEnd);
+  document.addEventListener('touchmove', onDragMove, {passive:false});
+  document.addEventListener('touchend',    onDragEnd);
+  document.addEventListener('touchcancel', onDragCancel);
+}
+
+// touchcancel — iOS cancels the touch (incoming call, scroll, etc.)
+// Must restore card visibility and clean up without attempting a drop
+function onDragCancel() {
+  if (!drag) return;
+  drag.ghost.style.display = 'none';
+  clearHighlights();
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup',   onDragEnd);
+  document.removeEventListener('touchmove', onDragMove);
+  document.removeEventListener('touchend',  onDragEnd);
+  document.removeEventListener('touchcancel', onDragCancel);
+  drag = null;
+  document.body.classList.remove('is-dragging');
+  render(); // rebuild DOM — restores all hidden cards to visible
+}
+
+function onDragMove(e) {
+  if (!drag) return;
+  e.preventDefault();
+  const point = e.touches ? e.touches[0] : e;
+  drag.ghost.style.left = (point.clientX - drag.offsetX) + 'px';
+  drag.ghost.style.top  = (point.clientY - drag.offsetY) + 'px';
+  highlightDropZones(point.clientX, point.clientY);
+}
+
+function onDragEnd(e) {
+  if (!drag) return;
+  const point = e.changedTouches ? e.changedTouches[0] : e;
+  const x = point.clientX;
+  const y = point.clientY;
+  drag.ghost.style.display = 'none';
+  clearHighlights();
+
+  const TOLERANCE = 36;
+  let bestEl = null;
+  let bestDist = Infinity;
+
+  const dropEls = Array.from(document.querySelectorAll('[data-drop]'));
+  for (const el of dropEls) {
+    const r = el.getBoundingClientRect();
+    if (x >= r.left - TOLERANCE && x <= r.right + TOLERANCE &&
+        y >= r.top  - TOLERANCE && y <= r.bottom + TOLERANCE) {
+      const cx = (r.left + r.right) / 2;
+      const cy = (r.top + r.bottom) / 2;
+      const dist = Math.hypot(x - cx, y - cy);
+      if (dist < bestDist) { bestDist = dist; bestEl = el; }
+    }
+  }
+  const dropEl = bestEl;
+
+  if (dropEl) {
+    const type = dropEl.dataset.drop;
+    const idx  = parseInt(dropEl.dataset.idx);
+    try {
+      if (type === 'foundation' && !isNaN(idx)) {
+        if (drag && drag.cards.length === 1) {
+          const card = drag.cards[0];
+          if (canStackOnFoundation(card, foundations[idx])) {
+            saveHistory();
+            const realIdx = findCardIndex(drag.fromType, drag.fromIdx, card.id);
+            if (realIdx !== -1) {
+              removeCards(drag.fromType, drag.fromIdx, realIdx, 1);
+              foundations[idx].push(card);
+              card.faceUp = true;
+              addScore(drag.fromType === 'waste' ? 10 : 15);
+              moves++;
+              autoFlipTableau(drag.fromIdx, drag.fromType);
+              updateHUD(); render(); checkWin();
+              if (!gameStarted) startTimer();
+            }
+          } else {
+            tryMoveToFoundation(card, drag.fromType, drag.fromIdx, drag.fromCardIdx);
+          }
+        }
+      } else if (type === 'tableau' && !isNaN(idx) && drag) {
+        tryMoveToTableau(drag.cards, drag.fromType, drag.fromIdx, drag.fromCardIdx, idx);
+      }
+    } catch(err) {
+      console.error('Drop error:', err);
+    }
+  }
+
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup',   onDragEnd);
+  document.removeEventListener('touchmove', onDragMove);
+  document.removeEventListener('touchend',    onDragEnd);
+  document.removeEventListener('touchcancel', onDragCancel);
+  drag = null;
+  document.body.classList.remove('is-dragging');
+
+  // Restore hidden source cards if no valid drop happened (render() handles it on success)
+  if (drag === null) {
+    document.querySelectorAll('[data-card-id]').forEach(el => el.style.visibility = '');
+  }
+  render();
+}
+
+function highlightDropZones(x, y) {
+  clearHighlights();
+  const TOLERANCE = 36;
+  document.querySelectorAll('[data-drop]').forEach(el => {
+    const r = el.getBoundingClientRect();
+    if (x >= r.left - TOLERANCE && x <= r.right + TOLERANCE &&
+        y >= r.top  - TOLERANCE && y <= r.bottom + TOLERANCE) {
+      el.classList.add('drag-over');
+    }
+  });
+}
+
+function clearHighlights() {
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+
+// ── CLICK HANDLER ──────────────────────────────────────────────────────────
+function handleCardClick(e, card, fromType, fromIdx, fromCardIdx) {
+  e.stopPropagation();
+  if (!card.faceUp) return;
+
+  // Re-derive cardIdx from current state — avoids stale index after re-renders
+  let liveIdx = fromCardIdx;
+  if (fromType === 'tableau') {
+    liveIdx = tableau[fromIdx].findIndex(c => c.id === card.id);
+    if (liveIdx === -1) return;
+  } else if (fromType === 'waste') {
+    liveIdx = waste.length - 1;
+    if (liveIdx < 0 || waste[liveIdx].id !== card.id) return;
+  } else if (fromType === 'foundation') {
+    liveIdx = foundations[fromIdx].length - 1;
+    if (liveIdx < 0) return;
+  }
+
+  if (tryMoveToFoundation(card, fromType, fromIdx, liveIdx)) return;
+
+  const cards = getCardsFrom(fromType, fromIdx, liveIdx);
+  if (cards.length === 0) return;
+
+  for (let i = 0; i < 7; i++) {
+    if (fromType === 'tableau' && i === fromIdx) continue;
+    if (tableau[i].length > 0 && tryMoveToTableau(cards, fromType, fromIdx, liveIdx, i)) return;
+  }
+  for (let i = 0; i < 7; i++) {
+    if (fromType === 'tableau' && i === fromIdx) continue;
+    if (tableau[i].length === 0 && tryMoveToTableau(cards, fromType, fromIdx, liveIdx, i)) return;
+  }
+}
+
+function getCardsFrom(type, idx, cardIdx) {
+  if (type === 'waste') return waste.length > 0 ? [waste[waste.length-1]] : [];
+  if (type === 'tableau') return tableau[idx].slice(cardIdx);
+  if (type === 'foundation') return foundations[idx].length > 0 ? [foundations[idx][foundations[idx].length-1]] : [];
+  return [];
+}
+
+// ── DIMENSIONS ─────────────────────────────────────────────────────────────
+function getCardW() {
+  return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-w'));
+}
+function getCardH() {
+  return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-h'));
+}
+function getOverlapFaceDown() {
+  return window.innerWidth < 580 ? 12 : 18;
+}
+function getOverlapFaceUp() {
+  return window.innerWidth < 580 ? 18 : 28;
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+// ── SVG SUIT PATHS ─────────────────────────────────────────────────────────
+const SUIT_PATH = {
+  '♥': `<path d="M50,84 C18,62 4,42 4,27 C4,13 14,5 26,5 C37,5 45,12 50,22 C55,12 63,5 74,5 C86,5 96,13 96,27 C96,42 82,62 50,84Z"/>`,
+  '♦': `<path d="M50,4 C58,20 88,40 96,50 C88,60 58,80 50,96 C42,80 12,60 4,50 C12,40 42,20 50,4Z"/>`,
+  '♠': `<path d="M50,4 C50,4 92,36 92,60 C92,75 81,82 68,78 C73,86 78,91 87,93 L13,93 C22,91 27,86 32,78 C19,82 8,75 8,60 C8,36 50,4 50,4Z"/>`,
+  '♣': `<circle cx="50" cy="30" r="22"/><circle cx="25" cy="62" r="22"/><circle cx="75" cy="62" r="22"/><rect x="43" y="65" width="14" height="25"/><path d="M33,89 Q50,96 67,89 L67,97 L33,97Z"/>`,
+};
+
+const CARD_BACK_SVG = `<svg viewBox="0 0 80 112" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;border-radius:10px">
+  <defs>
+    <linearGradient id="backgrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5b9bd5"/>
+      <stop offset="100%" stop-color="#2e6db4"/>
+    <\/linearGradient>
+    <clipPath id="cardclip"><rect width="80" height="112" rx="10"/><\/clipPath>
+  <\/defs>
+  <rect width="80" height="112" rx="10" fill="url(#backgrad)"/>
+  <g clip-path="url(#cardclip)">
+    <!-- White geometric diamond grid -->
+    <g fill="white" opacity="0.18">
+      <!-- Row 1 -->
+      <polygon points="40,4 52,20 40,36 28,20"/>
+      <polygon points="68,4 80,20 68,36 56,20"/>
+      <polygon points="12,4 24,20 12,36 0,20"/>
+      <!-- Row 2 -->
+      <polygon points="40,36 52,52 40,68 28,52"/>
+      <polygon points="68,36 80,52 68,68 56,52"/>
+      <polygon points="12,36 24,52 12,68 0,52"/>
+      <!-- Row 3 -->
+      <polygon points="40,68 52,84 40,100 28,84"/>
+      <polygon points="68,68 80,84 68,100 56,84"/>
+      <polygon points="12,68 24,84 12,100 0,84"/>
+      <!-- Offset row -->
+      <polygon points="26,20 38,36 26,52 14,36"/>
+      <polygon points="54,20 66,36 54,52 42,36"/>
+      <polygon points="26,52 38,68 26,84 14,68"/>
+      <polygon points="54,52 66,68 54,84 42,68"/>
+      <polygon points="26,84 38,100 26,116 14,100"/>
+      <polygon points="54,84 66,100 54,116 42,100"/>
+    <\/g>
+    <!-- Border -->
+    <rect x="3" y="3" width="74" height="106" rx="8" fill="none" stroke="white" stroke-width="1.5" opacity="0.35"/>
+  <\/g>
+<\/svg>`;
+
+function suitSVG(suit, size) {
+  return `<svg viewBox="0 0 100 100" style="width:${size}px;height:${size}px;display:block;flex-shrink:0" xmlns="http://www.w3.org/2000/svg"><g fill="currentColor">${SUIT_PATH[suit]}<\/g><\/svg>`;
+}
+
+// SVG face card illustrations (J/Q/K) — flat modern style
+function faceCardSVG(rank, isRed) {
+  const C  = isRed ? '#c8181c' : '#0a0a14';   // main colour
+  const C2 = isRed ? '#8b0000' : '#1a1a3a';   // shadow/dark variant
+  const G  = '#d4af37';                         // gold
+  const S  = '#f4c17a';                         // skin
+  const W  = '#f8f4ee';                         // off-white / shirt
+  const BG = '#fefcf8';                         // card white
+
+  // ── helper: one half-figure at (cx,cy), rotated 'rot' degrees ──────────
+  // All figures drawn in a 56×50 viewbox half, then placed in the card
+
+  function kingHalf(cx, cy, rot, sc) {
+    return `<g transform="translate(${cx},${cy}) rotate(${rot}) scale(${sc})">
+      <!-- Robe base -->
+      <path d="M-22,50 L-18,20 Q0,30 18,20 L22,50Z" fill="${C}"/>
+      <path d="M-22,50 L-18,20 Q0,30 18,20 L22,50Z" fill="none" stroke="${C2}" stroke-width="0.6"/>
+      <!-- Robe details: vertical lines -->
+      <line x1="-8" y1="22" x2="-10" y2="50" stroke="${W}" stroke-width="0.7" opacity="0.5"/>
+      <line x1="0" y1="24" x2="0" y2="50" stroke="${W}" stroke-width="0.7" opacity="0.5"/>
+      <line x1="8" y1="22" x2="10" y2="50" stroke="${W}" stroke-width="0.7" opacity="0.5"/>
+      <!-- Collar / ermine trim -->
+      <path d="M-10,20 Q0,26 10,20 L10,18 Q0,24 -10,18Z" fill="${W}"/>
+      <!-- Torso / surcoat -->
+      <rect x="-10" y="10" width="20" height="12" rx="2" fill="${C}"/>
+      <!-- Belt -->
+      <rect x="-11" y="19" width="22" height="3" fill="${G}"/>
+      <circle cx="-6" cy="20.5" r="1.3" fill="${C2}"/>
+      <circle cx="0" cy="20.5" r="1.3" fill="${C2}"/>
+      <circle cx="6" cy="20.5" r="1.3" fill="${C2}"/>
+      <!-- Sword held in right hand -->
+      <line x1="14" y1="8" x2="14" y2="30" stroke="${W}" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="10" y1="12" x2="18" y2="12" stroke="${G}" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="14" cy="30" r="2" fill="${G}"/>
+      <!-- Left arm across body -->
+      <path d="M-10,14 Q-16,16 -18,22" stroke="${S}" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <circle cx="-18" cy="23" r="3" fill="${S}"/>
+      <!-- Orb in left hand -->
+      <circle cx="-18" cy="22" r="4" fill="${G}" opacity="0.9"/>
+      <circle cx="-19" cy="20" r="1.2" fill="${W}" opacity="0.7"/>
+      <!-- Neck -->
+      <rect x="-4" y="4" width="8" height="8" rx="3" fill="${S}"/>
+      <!-- Head -->
+      <ellipse cx="0" cy="-3" rx="11" ry="12" fill="${S}"/>
+      <!-- Ear -->
+      <ellipse cx="-10.5" cy="-2" rx="2" ry="3.2" fill="${S}"/>
+      <ellipse cx="10.5" cy="-2" rx="2" ry="3.2" fill="${S}"/>
+      <!-- Hair / sideburns -->
+      <path d="M-10,-14 Q-12,-6 -11,2" stroke="${C2}" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.85"/>
+      <path d="M10,-14 Q12,-6 11,2" stroke="${C2}" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.85"/>
+      <!-- Moustache & beard -->
+      <path d="M-5,2 Q0,5 5,2" stroke="${C2}" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M-6,4 Q0,10 6,4" stroke="${C2}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <!-- Eyes -->
+      <ellipse cx="-3.5" cy="-4" rx="1.8" ry="2" fill="${C2}"/>
+      <ellipse cx="3.5" cy="-4" rx="1.8" ry="2" fill="${C2}"/>
+      <circle cx="-3" cy="-4.3" r="0.7" fill="white"/>
+      <circle cx="4" cy="-4.3" r="0.7" fill="white"/>
+      <!-- Eyebrows -->
+      <path d="M-5.5,-7 Q-3.5,-8.5 -1.5,-7" stroke="${C2}" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      <path d="M1.5,-7 Q3.5,-8.5 5.5,-7" stroke="${C2}" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      <!-- Crown -->
+      <rect x="-11" y="-17" width="22" height="5" rx="1.5" fill="${G}"/>
+      <path d="M-11,-17 L-8,-24 L-4,-19 L0,-26 L4,-19 L8,-24 L11,-17Z" fill="${G}"/>
+      <!-- Crown gems -->
+      <circle cx="-4" cy="-21" r="1.8" fill="${C}"/>
+      <circle cx="0" cy="-23" r="1.8" fill="${C}"/>
+      <circle cx="4" cy="-21" r="1.8" fill="${C}"/>
+      <!-- Crown band detail -->
+      <line x1="-11" y1="-14.5" x2="11" y2="-14.5" stroke="${C2}" stroke-width="0.8" opacity="0.5"/>
+    <\/g>`;
+  }
+
+  function queenHalf(cx, cy, rot, sc) {
+    return `<g transform="translate(${cx},${cy}) rotate(${rot}) scale(${sc})">
+      <!-- Dress base -->
+      <path d="M-20,50 L-16,22 Q0,32 16,22 L20,50Z" fill="${C}"/>
+      <path d="M-20,50 L-16,22 Q0,32 16,22 L20,50Z" fill="none" stroke="${C2}" stroke-width="0.6"/>
+      <!-- Dress detail lines -->
+      <path d="M-6,24 Q-4,37 -5,50" stroke="${W}" stroke-width="0.7" opacity="0.4" fill="none"/>
+      <path d="M6,24 Q4,37 5,50" stroke="${W}" stroke-width="0.7" opacity="0.4" fill="none"/>
+      <!-- Waist belt -->
+      <path d="M-12,22 Q0,28 12,22 L12,20 Q0,26 -12,20Z" fill="${G}"/>
+      <!-- Bodice -->
+      <rect x="-9" y="10" width="18" height="12" rx="2" fill="${C}"/>
+      <!-- Necklace -->
+      <path d="M-7,12 Q0,16 7,12" stroke="${G}" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <circle cx="0" cy="15" r="1.5" fill="${G}"/>
+      <!-- Left arm with flower/scepter -->
+      <path d="M-9,14 Q-15,16 -17,22" stroke="${S}" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <circle cx="-17" cy="23" r="3" fill="${S}"/>
+      <!-- Flower/orb -->
+      <circle cx="-17" cy="22" r="4.5" fill="${C}" opacity="0.85"/>
+      <circle cx="-17" cy="22" r="2" fill="${G}"/>
+      <circle cx="-17.8" cy="20.8" r="1" fill="${W}" opacity="0.8"/>
+      <!-- Right arm -->
+      <path d="M9,14 Q14,17 14,24" stroke="${S}" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <circle cx="14" cy="25" r="3" fill="${S}"/>
+      <!-- Scepter in right hand -->
+      <line x1="14" y1="6" x2="14" y2="26" stroke="${G}" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="14" cy="5" r="3" fill="${G}"/>
+      <circle cx="14.5" cy="4.2" r="1" fill="${W}" opacity="0.8"/>
+      <!-- Neck -->
+      <rect x="-4" y="4" width="8" height="8" rx="3" fill="${S}"/>
+      <!-- Head -->
+      <ellipse cx="0" cy="-4" rx="10" ry="12" fill="${S}"/>
+      <!-- Ear -->
+      <ellipse cx="-9.5" cy="-3" rx="1.8" ry="2.8" fill="${S}"/>
+      <ellipse cx="9.5" cy="-3" rx="1.8" ry="2.8" fill="${S}"/>
+      <!-- Earrings -->
+      <circle cx="-9.5" cy="-0.5" r="1.5" fill="${G}"/>
+      <circle cx="9.5" cy="-0.5" r="1.5" fill="${G}"/>
+      <!-- Hair flowing down sides -->
+      <path d="M-9,-15 Q-13,-5 -11,3" stroke="${C2}" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.8"/>
+      <path d="M9,-15 Q13,-5 11,3" stroke="${C2}" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.8"/>
+      <!-- Hair top -->
+      <path d="M-9,-15 Q0,-20 9,-15" fill="${C2}" opacity="0.85"/>
+      <!-- Eyes — almond shaped -->
+      <path d="M-5,-5 Q-3,-7 -1,-5 Q-3,-3 -5,-5Z" fill="${C2}"/>
+      <path d="M1,-5 Q3,-7 5,-5 Q3,-3 1,-5Z" fill="${C2}"/>
+      <circle cx="-2.5" cy="-5.3" r="0.6" fill="white"/>
+      <circle cx="2.5" cy="-5.3" r="0.6" fill="white"/>
+      <!-- Lashes -->
+      <path d="M-5,-5.5 L-6.5,-7" stroke="${C2}" stroke-width="0.8"/>
+      <path d="M-3,-6.5 L-3.5,-8.2" stroke="${C2}" stroke-width="0.8"/>
+      <path d="M5,-5.5 L6.5,-7" stroke="${C2}" stroke-width="0.8"/>
+      <path d="M3,-6.5 L3.5,-8.2" stroke="${C2}" stroke-width="0.8"/>
+      <!-- Lips -->
+      <path d="M-3.5,2.5 Q0,4.5 3.5,2.5" stroke="${C}" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <path d="M-3.5,2.5 Q0,1 3.5,2.5" stroke="${C}" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+      <!-- Crown -->
+      <rect x="-10" y="-18" width="20" height="5" rx="1.5" fill="${G}"/>
+      <path d="M-10,-18 L-7,-25 L-3,-20 L0,-27 L3,-20 L7,-25 L10,-18Z" fill="${G}"/>
+      <circle cx="-3" cy="-22" r="1.8" fill="${C}"/>
+      <circle cx="0" cy="-24.5" r="1.8" fill="${C}"/>
+      <circle cx="3" cy="-22" r="1.8" fill="${C}"/>
+      <line x1="-10" y1="-14.5" x2="10" y2="-14.5" stroke="${C2}" stroke-width="0.7" opacity="0.4"/>
+    <\/g>`;
+  }
+
+  function jackHalf(cx, cy, rot, sc) {
+    return `<g transform="translate(${cx},${cy}) rotate(${rot}) scale(${sc})">
+      <!-- Tunic/jacket -->
+      <path d="M-18,50 L-14,20 Q0,28 14,20 L18,50Z" fill="${C}"/>
+      <!-- Jacket detail -->
+      <path d="M-18,50 L-14,20 Q0,28 14,20 L18,50Z" fill="none" stroke="${C2}" stroke-width="0.6"/>
+      <line x1="-5" y1="22" x2="-6" y2="50" stroke="${W}" stroke-width="0.7" opacity="0.45"/>
+      <line x1="5" y1="22" x2="6" y2="50" stroke="${W}" stroke-width="0.7" opacity="0.45"/>
+      <!-- Buttons -->
+      <circle cx="0" cy="26" r="1.2" fill="${G}"/>
+      <circle cx="0" cy="32" r="1.2" fill="${G}"/>
+      <circle cx="0" cy="38" r="1.2" fill="${G}"/>
+      <!-- Collar / ruff -->
+      <path d="M-10,18 Q-5,22 0,20 Q5,22 10,18 L10,15 Q5,19 0,17 Q-5,19 -10,15Z" fill="${W}"/>
+      <!-- Shoulder armour -->
+      <ellipse cx="-14" cy="18" rx="5" ry="3.5" fill="${C2}" opacity="0.8"/>
+      <ellipse cx="14" cy="18" rx="5" ry="3.5" fill="${C2}" opacity="0.8"/>
+      <!-- Right arm holding lance/feather -->
+      <path d="M12,14 Q16,16 17,24" stroke="${S}" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <circle cx="17" cy="25" r="2.8" fill="${S}"/>
+      <!-- Lance -->
+      <line x1="17" y1="4" x2="17" y2="26" stroke="${G}" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M15,4 L17,0 L19,4Z" fill="${G}"/>
+      <!-- Left arm -->
+      <path d="M-12,14 Q-16,17 -16,24" stroke="${S}" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <circle cx="-16" cy="25" r="2.8" fill="${S}"/>
+      <!-- Shield / medallion -->
+      <path d="M-20,18 L-14,16 L-12,22 L-16,26 L-20,24Z" fill="${G}" opacity="0.9"/>
+      <circle cx="-16" cy="21" r="2.5" fill="${C}"/>
+      <!-- Neck -->
+      <rect x="-3.5" y="4" width="7" height="7" rx="3" fill="${S}"/>
+      <!-- Head - slightly younger/angular than king -->
+      <ellipse cx="0" cy="-4" rx="10.5" ry="11.5" fill="${S}"/>
+      <!-- Ear -->
+      <ellipse cx="-9.5" cy="-3" rx="1.8" ry="2.8" fill="${S}"/>
+      <ellipse cx="9.5" cy="-3" rx="1.8" ry="2.8" fill="${S}"/>
+      <!-- Hair - shorter, under hat -->
+      <path d="M-9,-14 Q-10,-7 -9.5,-1" stroke="${C2}" stroke-width="2.5" fill="none" opacity="0.85"/>
+      <path d="M9,-14 Q10,-7 9.5,-1" stroke="${C2}" stroke-width="2.5" fill="none" opacity="0.85"/>
+      <!-- Eyes - alert -->
+      <ellipse cx="-3.5" cy="-5" rx="1.8" ry="2" fill="${C2}"/>
+      <ellipse cx="3.5" cy="-5" rx="1.8" ry="2" fill="${C2}"/>
+      <circle cx="-3" cy="-5.3" r="0.7" fill="white"/>
+      <circle cx="4" cy="-5.3" r="0.7" fill="white"/>
+      <!-- Eyebrows - slight frown of concentration -->
+      <path d="M-5.5,-8 Q-3.5,-9.5 -1.5,-8" stroke="${C2}" stroke-width="1.3" fill="none"/>
+      <path d="M1.5,-8 Q3.5,-9.5 5.5,-8" stroke="${C2}" stroke-width="1.3" fill="none"/>
+      <!-- Slight smirk -->
+      <path d="M-2,0.5 Q1,2.5 4,1" stroke="${C2}" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      <!-- Feathered cap / hat -->
+      <path d="M-11,-14 Q-2,-22 11,-14 L10,-12 Q0,-19 -10,-12Z" fill="${C}"/>
+      <path d="M-10,-13 Q-2,-20 10,-13" fill="${C2}" opacity="0.5"/>
+      <!-- Hat brim -->
+      <rect x="-12" y="-14" width="24" height="3.5" rx="1.5" fill="${C2}"/>
+      <!-- Feather -->
+      <path d="M9,-14 Q18,-22 14,-30 Q10,-20 9,-14Z" fill="${W}" opacity="0.8"/>
+      <path d="M9,-14 Q14,-22 12,-28" stroke="${C2}" stroke-width="0.8" fill="none" opacity="0.6"/>
+    <\/g>`;
+  }
+
+  // Card is 80×112. Top half: y 0–56. Bottom half: y 56–112.
+  // Each figure is drawn in local coords spanning approx y -26 (crown) to +50 (robe bottom) = 76 units tall.
+  // Scale to fit in 50px (with 3px padding each side): scale = 50/76 ≈ 0.65
+  // Top figure center: y = 3 + 16.9 = 20  (crown at y≈3, robe at y≈53)
+  // Bottom figure center: y = 56 + 3 + 16.9 = 76... wait:
+  // Bottom: rotate 180, so crown (was -26) becomes +26 from center.
+  // center_y so that center_y - 32.5 = 59 (just below divider) → center_y = 91.5
+  // center_y + 16.9 = 108.4 ✓ (within 112)
+
+  const figureHalf = rank === 'K' ? kingHalf : rank === 'Q' ? queenHalf : jackHalf;
+
+  const SC = 0.65; // scale factor for figures
+  const topCY = 20;
+  const botCY = 92;
+
+  const topFigure  = figureHalf(40, topCY, 0,   SC);
+  const botFigure  = figureHalf(40, botCY, 180, SC);
+
+  return `<svg viewBox="0 0 80 112" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;border-radius:10px;position:absolute;inset:0">
+    <defs>
+      <clipPath id="topHalf"><rect x="0" y="0" width="80" height="56"\/><\/clipPath>
+      <clipPath id="botHalf"><rect x="0" y="56" width="80" height="56"\/><\/clipPath>
+    <\/defs>
+    <rect width="80" height="112" rx="10" fill="${BG}"\/>
+    <!-- Top half — clipped to y 0–56 -->
+    <g clip-path="url(#topHalf)">${topFigure}<\/g>
+    <!-- Bottom half — rotated 180°, clipped to y 56–112 -->
+    <g clip-path="url(#botHalf)">${botFigure}<\/g>
+    <!-- Dividing line -->
+    <line x1="4" y1="56" x2="76" y2="56" stroke="${C}" stroke-width="0.9" opacity="0.35"\/>
+    <!-- Inner border -->
+    <rect x="3" y="3" width="74" height="106" rx="8" fill="none" stroke="${C}" stroke-width="0.8" opacity="0.22"\/>
+  <\/svg>`;
+}
+
+function renderCardEl(card) {
+  const el = document.createElement('div');
+  el.className = 'card' + (card.isRed ? ' red' : ' black') + (card.faceUp ? '' : ' face-down');
+  el.dataset.cardId = card.id;
+
+  // Back
+  const back = document.createElement('div');
+  back.className = 'card-back';
+  back.innerHTML = CARD_BACK_SVG;
+  el.appendChild(back);
+
+  // Front
+  const front = document.createElement('div');
+  front.className = 'card-front';
+
+  const isFaceCard = ['J','Q','K'].includes(card.rank);
+  const rankClass = card.rank === '10' ? 'card-rank wide' : 'card-rank';
+  const sm = window.innerWidth < 580 ? 12 : 15;
+  const lg = window.innerWidth < 580 ? 38 : 54;
+
+  // Top-left corner
+  const topCorner = document.createElement('div');
+  topCorner.className = 'card-corner top';
+  topCorner.innerHTML = `<div class="${rankClass}">${card.rank}<\/div>${suitSVG(card.suit, sm)}`;
+
+  // Bottom-right corner (rotated)
+  const botCorner = document.createElement('div');
+  botCorner.className = 'card-corner bottom';
+  botCorner.innerHTML = `<div class="${rankClass}">${card.rank}<\/div>${suitSVG(card.suit, sm)}`;
+
+  front.appendChild(topCorner);
+  front.appendChild(botCorner);
+
+  if (isFaceCard) {
+    // Full-card SVG illustration — sits behind corners
+    const art = document.createElement('div');
+    art.style.cssText = 'position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:10px;overflow:hidden';
+    art.innerHTML = faceCardSVG(card.rank, card.isRed);
+    front.appendChild(art);
+  } else {
+    // Number/Ace card — large center pip
+    const center = document.createElement('div');
+    center.className = 'card-center';
+    const centerWrap = document.createElement('div');
+    centerWrap.innerHTML = suitSVG(card.suit, lg);
+    const svg = centerWrap.querySelector('svg');
+    svg.style.opacity = card.rank === 'A' ? '0.92' : '0.18';
+    center.appendChild(svg);
+    front.appendChild(center);
+  }
+
+  el.appendChild(front);
+  return el;
+}
+
+
+function renderStock() {
+  const pile = document.getElementById('stock-pile');
+  pile.querySelectorAll('.card').forEach(e => e.remove());
+  pile.onclick = clickStock; // on the container so it always fires
+
+  if (stock.length > 0) {
+    const card = stock[stock.length - 1];
+    const el = renderCardEl({...card, faceUp: false});
+    el.style.position = 'absolute';
+    el.style.top = '0'; el.style.left = '0';
+    el.style.cursor = 'pointer';
+    el.onclick = e => { e.stopPropagation(); clickStock(); };
+    if (stock.length > 1) {
+      const sh = document.createElement('div');
+      sh.className = 'card face-down';
+      sh.style.position='absolute'; sh.style.top='-2px'; sh.style.left='1px';
+      sh.style.width=getCardW()+'px'; sh.style.height=getCardH()+'px';
+      const b = document.createElement('div'); b.className='card-back'; sh.appendChild(b);
+      const f = document.createElement('div'); f.className='card-front'; sh.appendChild(f);
+      pile.appendChild(sh);
+    }
+    pile.appendChild(el);
+  }
+  const slot = document.getElementById('stock-slot');
+  slot.onclick = clickStock;
+}
+
+function renderWaste() {
+  const pile = document.getElementById('waste-pile');
+  pile.querySelectorAll('.card').forEach(e => e.remove());
+  if (waste.length === 0) return;
+
+  const card = waste[waste.length - 1];
+  const el = renderCardEl(card);
+  el.style.position = 'absolute';
+  el.style.top = '0'; el.style.left = '0';
+
+  el.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    startDrag(e, [card], 'waste', 0, waste.length-1);
+  });
+  el.addEventListener('touchstart', e => startDrag(e, [card], 'waste', 0, waste.length-1), {passive:false});
+  el.addEventListener('click', e => handleCardClick(e, card, 'waste', 0, waste.length-1));
+  el.addEventListener('dblclick', e => {
+    e.stopPropagation();
+    tryMoveToFoundation(card, 'waste', 0, waste.length-1);
+  });
+
+  // Show previous card peeking
+  if (waste.length > 1) {
+    const prev = waste[waste.length - 2];
+    const pe = renderCardEl(prev);
+    pe.style.position='absolute'; pe.style.top='0'; pe.style.left='-6px';
+    pe.style.opacity='0.5'; pe.style.pointerEvents='none';
+    pile.appendChild(pe);
+  }
+  pile.appendChild(el);
+}
+
+function renderFoundations() {
+  for (let fi = 0; fi < 4; fi++) {
+    const area = document.getElementById('f' + fi);
+    area.querySelectorAll('.card').forEach(e => e.remove());
+    // Add drop zone attribute to slot
+    const slot = area.querySelector('.card-slot');
+    slot.dataset.drop = 'foundation';
+    slot.dataset.idx = fi;
+
+    const pile = foundations[fi];
+    if (pile.length === 0) continue;
+    const card = pile[pile.length - 1];
+    const el = renderCardEl(card);
+    el.style.position = 'absolute';
+    el.style.top = '0'; el.style.left = '0';
+
+    el.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      startDrag(e, [card], 'foundation', fi, pile.length-1);
+    });
+    el.addEventListener('touchstart', e => startDrag(e, [card], 'foundation', fi, pile.length-1), {passive:false});
+    el.addEventListener('click', e => handleCardClick(e, card, 'foundation', fi, pile.length-1));
+    el.dataset.drop = 'foundation';
+    el.dataset.idx = fi;
+    area.appendChild(el);
+  }
+}
+
+function renderTableau() {
+  const cardW = getCardW();
+  const cardH = getCardH();
+  const overlapDown = getOverlapFaceDown();
+  const overlapUp = getOverlapFaceUp();
+
+  for (let ci = 0; ci < 7; ci++) {
+    const col = document.getElementById('t' + ci);
+    col.querySelectorAll('.card').forEach(e => e.remove());
+    const slot = col.querySelector('.card-slot');
+    slot.dataset.drop = 'tableau';
+    slot.dataset.idx = ci;
+
+    const cards = tableau[ci];
+    if (cards.length === 0) continue;
+
+    // Calculate total height needed
+    let topY = 0;
+    cards.forEach((card, idx) => {
+      const el = renderCardEl(card);
+      el.style.position = 'absolute';
+      el.style.top = topY + 'px';
+      el.style.left = '0';
+      el.style.width = cardW + 'px';
+      el.style.height = cardH + 'px';
+      el.style.zIndex = idx + 1;
+
+      if (card.faceUp) {
+        // Drop zone on face-up cards
+        el.dataset.drop = 'tableau';
+        el.dataset.idx = ci;
+
+        // Drag: pick up this card and everything above it
+        const subStack = cards.slice(idx);
+        el.addEventListener('mousedown', e => {
+          if (e.button !== 0) return;
+          startDrag(e, [...subStack], 'tableau', ci, idx);
+        });
+        el.addEventListener('touchstart', e => {
+          startDrag(e, [...subStack], 'tableau', ci, idx);
+        }, {passive:false});
+        el.addEventListener('click', e => handleCardClick(e, card, 'tableau', ci, idx));
+        el.addEventListener('dblclick', e => {
+          e.stopPropagation();
+          tryMoveToFoundation(card, 'tableau', ci, idx);
+        });
+
+        topY += overlapUp;
+      } else {
+        topY += overlapDown;
+      }
+
+      col.appendChild(el);
+    });
+
+    // Set column height so it doesn't collapse
+    const lastCard = cards[cards.length-1];
+    col.style.height = (topY + cardH) + 'px';
+  }
+}
+
+// ── AUTO-COMPLETE ───────────────────────────────────────────────────────────
+function autoComplete() {
+  // If all cards are face up (stock empty, waste empty or all face up), auto-move to foundations
+  if (stock.length > 0) return;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    // Check waste
+    if (waste.length > 0) {
+      const card = waste[waste.length-1];
+      for (let fi = 0; fi < 4; fi++) {
+        if (canStackOnFoundation(card, foundations[fi])) {
+          saveHistory();
+          waste.pop();
+          foundations[fi].push(card);
+          addScore(10); moves++;
+          changed = true; break;
+        }
+      }
+    }
+    // Check tableau tops
+    for (let ci = 0; ci < 7; ci++) {
+      const col = tableau[ci];
+      if (col.length === 0) continue;
+      const card = col[col.length-1];
+      if (!card.faceUp) continue;
+      for (let fi = 0; fi < 4; fi++) {
+        if (canStackOnFoundation(card, foundations[fi])) {
+          saveHistory();
+          col.pop();
+          foundations[fi].push(card);
+          addScore(15); moves++;
+          // Flip newly exposed card if face-down
+          if (col.length > 0 && !col[col.length-1].faceUp) {
+            col[col.length-1].faceUp = true;
+            addScore(5);
+          }
+          changed = true; break;
+        }
+      }
+      if (changed) break;
+    }
+    if (changed) { updateHUD(); render(); checkWin(); }
+  }
+}
+
+// ── FIREWORKS ──────────────────────────────────────────────────────────────
+let fwCanvas, fwCtx, fwRAF, fwLaunchTimer;
+let fwParticles = [], fwRockets = [];
+const FW_COLORS = ['#ff4466','#ff9900','#ffdd00','#44ff88','#44aaff','#dd44ff','#ff6699','#ffffff'];
+const FW_SUITS  = ['♥','♦','♠','♣'];
+
+function fwRandColor() { return FW_COLORS[Math.floor(Math.random()*FW_COLORS.length)]; }
+
+function fwLaunch() {
+  const x = window.innerWidth * (0.15 + Math.random() * 0.7);
+  fwRockets.push({ x, y: window.innerHeight + 10,
+    vx: (Math.random()-0.5)*2, vy: -(Math.random()*7+9),
+    color: fwRandColor(), done: false });
+  fwLaunchTimer = setTimeout(fwLaunch, Math.random()*500+150);
+}
+
+function fwExplode(r) {
+  const N = 60 + Math.floor(Math.random()*30);
+  for (let i=0;i<N;i++) {
+    const angle = (i/N)*Math.PI*2 + Math.random()*0.2;
+    const spd   = Math.random()*5+2;
+    fwParticles.push({
+      x:r.x, y:r.y,
+      vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd,
+      color: Math.random()>0.3 ? r.color : fwRandColor(),
+      alpha: 1, size: Math.random()*3+1.5,
+      isSuit: Math.random()>0.72,
+      suit: FW_SUITS[Math.floor(Math.random()*4)]
+    });
+  }
+}
+
+function fwAnimate() {
+  fwCtx.clearRect(0,0,fwCanvas.width,fwCanvas.height);
+
+  // Rockets
+  for (let i=fwRockets.length-1; i>=0; i--) {
+    const r=fwRockets[i];
+    r.x+=r.vx; r.y+=r.vy; r.vy+=0.22;
+    // Trail
+    fwCtx.globalAlpha=0.7;
+    fwCtx.beginPath(); fwCtx.arc(r.x,r.y,3,0,Math.PI*2);
+    fwCtx.fillStyle=r.color; fwCtx.fill();
+    if (r.vy>=0) { fwExplode(r); fwRockets.splice(i,1); }
+  }
+
+  // Particles
+  for (let i=fwParticles.length-1; i>=0; i--) {
+    const p=fwParticles[i];
+    p.x+=p.vx; p.y+=p.vy;
+    p.vy+=0.08; p.vx*=0.97; p.alpha-=0.016;
+    if (p.alpha<=0) { fwParticles.splice(i,1); continue; }
+    fwCtx.globalAlpha=p.alpha;
+    if (p.isSuit) {
+      fwCtx.fillStyle=p.color;
+      fwCtx.font=`bold ${p.size*4}px serif`;
+      fwCtx.fillText(p.suit, p.x, p.y);
+    } else {
+      fwCtx.beginPath(); fwCtx.arc(p.x,p.y,p.size,0,Math.PI*2);
+      fwCtx.fillStyle=p.color; fwCtx.fill();
+    }
+  }
+  fwCtx.globalAlpha=1;
+  fwRAF=requestAnimationFrame(fwAnimate);
+}
+
+function startFireworks() {
+  fwCanvas=document.getElementById('fireworks-canvas');
+  fwCanvas.width=window.innerWidth; fwCanvas.height=window.innerHeight;
+  fwCtx=fwCanvas.getContext('2d');
+  fwParticles=[]; fwRockets=[];
+  fwLaunch();
+  fwRAF=requestAnimationFrame(fwAnimate);
+}
+
+function stopFireworks() {
+  cancelAnimationFrame(fwRAF);
+  clearTimeout(fwLaunchTimer);
+  if(fwCtx) fwCtx.clearRect(0,0,fwCanvas.width,fwCanvas.height);
+  fwParticles=[]; fwRockets=[];
+}
+document.getElementById('new-btn').addEventListener('click', newGame);
+document.getElementById('win-new-btn').addEventListener('click', newGame);
+document.getElementById('undo-btn').addEventListener('click', undo);
+
+// ── CARD WATERFALL ────────────────────────────────────────────────────────
+let wfCanvas, wfCtx, wfRAF;
+let wfCards = [];
+const WF_SUITS=['♥','♦','♠','♣'],WF_RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'],WF_REDS=new Set(['♥','♦']);
+
+function startWaterfall(){
+  wfCanvas=document.getElementById('waterfall-canvas');
+  wfCanvas.width=window.innerWidth;wfCanvas.height=window.innerHeight;
+  wfCtx=wfCanvas.getContext('2d');wfCards=[];
+  let delay=0;
+  for(let i=0;i<52;i++){
+    const suit=WF_SUITS[Math.floor(Math.random()*4)];
+    const rank=WF_RANKS[Math.floor(Math.random()*13)];
+    const W=window.innerWidth,cw=56,ch=80;
+    setTimeout(()=>{
+      wfCards.push({x:Math.random()*(W-cw),y:-ch-Math.random()*200,vx:(Math.random()-.5)*3,
+        vy:Math.random()*2+2,rot:(Math.random()-.5)*.4,vrot:(Math.random()-.5)*.06,
+        bounces:0,maxBounces:Math.floor(Math.random()*3)+1,cw,ch,suit,rank,
+        isRed:WF_REDS.has(suit),alpha:1});
+    },delay);
+    delay+=Math.random()*120+40;
+  }
+  wfRAF=requestAnimationFrame(wfFrame);
+}
+
+function wfFrame(){
+  const W=wfCanvas.width,H=wfCanvas.height;
+  wfCtx.clearRect(0,0,W,H);
+  for(let i=wfCards.length-1;i>=0;i--){
+    const c=wfCards[i];
+    c.vy+=0.35;c.x+=c.vx;c.y+=c.vy;c.rot+=c.vrot;
+    if(c.y+c.ch>=H){c.y=H-c.ch;c.vy=-(c.vy*.55);c.vx+=(Math.random()-.5)*1.5;c.bounces++;
+      if(c.bounces>=c.maxBounces){c.alpha-=.025;if(c.alpha<=0){wfCards.splice(i,1);continue;}}}
+    if(c.x<-c.cw)c.x=W;if(c.x>W)c.x=-c.cw;
+    drawWfCard(c);
+  }
+  wfRAF=requestAnimationFrame(wfFrame);
+}
+
+function drawWfCard(c){
+  const ctx=wfCtx,hw=c.cw/2,hh=c.ch/2;
+  ctx.save();ctx.globalAlpha=c.alpha;
+  ctx.translate(c.x+hw,c.y+hh);ctx.rotate(c.rot);
+  ctx.shadowColor='rgba(0,0,0,0.4)';ctx.shadowBlur=6;ctx.shadowOffsetY=3;
+  ctx.beginPath();ctx.roundRect(-hw,-hh,c.cw,c.ch,5);ctx.fillStyle='#faf6ee';ctx.fill();
+  ctx.shadowColor='transparent';ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle=c.isRed?'#c0181a':'#111';
+  ctx.font='bold 11px serif';ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillText(c.rank,-hw+4,-hh+3);ctx.font='9px serif';ctx.fillText(c.suit,-hw+4,-hh+16);
+  ctx.save();ctx.translate(hw-4,hh-3);ctx.rotate(Math.PI);
+  ctx.font='bold 11px serif';ctx.fillText(c.rank,0,0);ctx.font='9px serif';ctx.fillText(c.suit,0,13);ctx.restore();
+  ctx.font=`${c.cw*.45}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.globalAlpha=c.alpha*.13;ctx.fillText(c.suit,0,2);
+  ctx.restore();
+}
+
+function stopWaterfall(){
+  cancelAnimationFrame(wfRAF);
+  if(wfCtx)wfCtx.clearRect(0,0,wfCanvas.width,wfCanvas.height);
+  wfCards=[];
+}
+
+// Auto-complete triggers on stock empty via clickStock and move functions
+
+newGame();
+</script>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+</body>
+</html>
