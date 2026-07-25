@@ -1248,11 +1248,22 @@ function getCardsFrom(type, idx, cardIdx) {
 }
 
 // ── DIMENSIONS ─────────────────────────────────────────────────────────────
+// Measure actual rendered pixel size via a real DOM element rather than
+// re-reading the --card-w/--card-h custom property directly. Custom
+// properties return their LITERAL specified value from getComputedStyle
+// (e.g. "calc((100vw - 72px) / 7)" on mobile), not the resolved pixel
+// number — parseInt() on that string is NaN. #stock-slot always exists
+// in the DOM and inherits .card-slot's `width: var(--card-w)` as a real
+// CSS property, which DOES resolve calc() correctly via getBoundingClientRect().
 function getCardW() {
-  return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-w'));
+  const slot = document.getElementById('stock-slot');
+  const w = slot ? slot.getBoundingClientRect().width : 0;
+  return w > 0 ? w : 80; // fallback to desktop default if measured before layout
 }
 function getCardH() {
-  return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-h'));
+  const slot = document.getElementById('stock-slot');
+  const h = slot ? slot.getBoundingClientRect().height : 0;
+  return h > 0 ? h : 112;
 }
 function getOverlapFaceDown() {
   return window.innerWidth < 580 ? 12 : 18;
