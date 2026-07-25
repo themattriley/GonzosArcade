@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>N-Back — Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#07070f;--border:#1e1e3a;--cyan:#00f5d4;--magenta:#f72585;--yellow:#f9c74f;--purple:#9b5de5;--text:#e8e8ff;--muted:#6060a0}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;-webkit-tap-highlight-color:transparent}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,245,212,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,212,.025) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+    .page{position:relative;z-index:1;width:100%;max-width:540px;padding:28px 16px 40px;display:flex;flex-direction:column;align-items:center;gap:16px}
+    .nav{width:100%;display:flex;align-items:center;justify-content:space-between}
+    .back-btn{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);text-decoration:none;letter-spacing:1px;transition:color .2s}
+    .back-btn:hover{color:var(--cyan)}
+    .back-btn::before{content:'◄ '}
+    .game-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--cyan);opacity:.6}
+    h1{font-family:'Press Start 2P',monospace;font-size:clamp(12px,3vw,20px);letter-spacing:3px;color:var(--cyan);text-shadow:0 0 16px rgba(0,245,212,.5)}
+
+    .stats{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}
+    .stat{text-align:center}
+    .stat-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--muted);letter-spacing:2px;margin-bottom:3px}
+    .stat-value{font-family:'Press Start 2P',monospace;font-size:14px;color:var(--cyan)}
+    .stat-value.y{color:var(--yellow)}
+    .stat-value.p{color:var(--purple)}
+
+    .timer-bar-wrap{width:100%;max-width:480px;height:6px;background:var(--border)}
+    #trial-timer-bar{height:100%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);width:100%}
+
+    .stim-arena{width:100%;max-width:480px;height:190px;background:#06061a;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+    #stim-emoji{font-size:clamp(56px,16vw,92px);line-height:1;transition:opacity .12s}
+    #stim-emoji.flash{opacity:0}
+    #warmup-label{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-family:'Press Start 2P',monospace;font-size:8px;letter-spacing:2px;color:var(--yellow);opacity:.85;display:none}
+    .feedback{position:absolute;top:10px;right:14px;font-family:'Press Start 2P',monospace;font-size:11px;opacity:0;transition:opacity .1s;text-align:right}
+    .feedback.show{opacity:1}
+    .feedback.hit{color:var(--cyan)}
+    .feedback.bad{color:var(--magenta)}
+
+    .instruction{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);letter-spacing:1.5px;text-align:center;line-height:2;padding:10px 14px;border:1px solid var(--border)}
+
+    #match-btn{width:100%;max-width:480px;padding:20px 10px;font-family:'Press Start 2P',monospace;font-size:13px;letter-spacing:2px;border:none;cursor:pointer;background:var(--cyan);color:#03251f;box-shadow:0 0 20px rgba(0,245,212,.35);transition:transform .1s,box-shadow .15s,filter .1s,opacity .2s}
+    #match-btn:hover:not(:disabled){box-shadow:0 0 34px rgba(0,245,212,.55);transform:translateY(-2px)}
+    #match-btn:active:not(:disabled){transform:translateY(1px)}
+    #match-btn:disabled{opacity:.28;cursor:default;filter:grayscale(.5)}
+    #match-btn.pressed-flash{filter:brightness(1.5)}
+
+    /* Overlays */
+    .overlay{position:fixed;inset:0;background:rgba(7,7,15,.95);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;overflow-y:auto}
+    .overlay.hidden{display:none}
+    .ov-title{font-family:'Press Start 2P',monospace;font-size:clamp(14px,4vw,22px);letter-spacing:2px;color:var(--cyan);text-shadow:0 0 20px var(--cyan);text-align:center}
+    .ov-sub{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-align:center;line-height:2.3;max-width:420px}
+    .ov-sub b{color:var(--cyan)}
+    .ov-btn{font-family:'Press Start 2P',monospace;font-size:10px;padding:14px 32px;border:none;cursor:pointer;letter-spacing:1px;background:var(--cyan);color:#03251f;box-shadow:0 0 20px var(--cyan);transition:box-shadow .2s;margin-top:4px}
+    .ov-btn:hover{box-shadow:0 0 40px var(--cyan)}
+
+    .picker{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:6px}
+    .picker-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);letter-spacing:2px}
+    .picker-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+    .picker-btn{font-family:'Press Start 2P',monospace;font-size:10px;padding:10px 14px;border:1.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;letter-spacing:1px;transition:all .15s}
+    .picker-btn:hover{color:var(--text);border-color:var(--cyan)}
+    .picker-btn.selected{background:var(--cyan);color:#03251f;border-color:var(--cyan);box-shadow:0 0 14px rgba(0,245,212,.5)}
+
+    .result-stats{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--text);letter-spacing:1px;text-align:center;line-height:2.4;background:#06061a;border:1px solid var(--border);padding:14px 18px}
+    .result-stats .hi{color:var(--cyan)}
+    .result-stats .lo{color:var(--magenta)}
+  </style>
+</head>
+<body>
+<div class="page">
+  <nav class="nav">
+    <a class="back-btn" href="index.html">ARCADE</a>
+    <span class="game-label">GAME 16</span>
+  </nav>
+  <h1>N-BACK</h1>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">LEVEL</div><div class="stat-value" id="level-disp">2-BACK</div></div>
+    <div class="stat"><div class="stat-label">TRIAL</div><div class="stat-value" id="trial-disp">0 / 0</div></div>
+    <div class="stat"><div class="stat-label">SCORE</div><div class="stat-value" id="score-disp">0</div></div>
+    <div class="stat"><div class="stat-label">STREAK</div><div class="stat-value y" id="streak-disp">0</div></div>
+  </div>
+
+  <div class="timer-bar-wrap"><div id="trial-timer-bar"></div></div>
+
+  <div class="instruction" id="instruction">TAP MATCH IF THIS PICTURE IS THE<br>SAME AS THE ONE <span id="n-word" style="color:var(--cyan)">2</span> STEPS BACK</div>
+
+  <div class="stim-arena">
+    <span id="stim-emoji"></span>
+    <div id="warmup-label">MEMORIZE — SEQUENCE STARTING</div>
+    <span class="feedback" id="feedback">HIT</span>
+  </div>
+
+  <button id="match-btn" disabled>◆ MATCH ◆</button>
+</div>
+
+<!-- SETUP OVERLAY -->
+<div class="overlay" id="setup-overlay">
+  <div class="ov-title">N-BACK</div>
+  <div class="ov-sub">
+    PICTURES APPEAR ONE AT A TIME.<br>
+    TAP <b>MATCH</b> WHEN THE CURRENT PICTURE<br>
+    IS THE SAME AS THE ONE FROM <b>N</b> STEPS EARLIER.<br><br>
+    HIGHER N = HARDER = MORE POINTS
+  </div>
+
+  <div class="picker">
+    <div class="picker-label">CHOOSE YOUR N-LEVEL</div>
+    <div class="picker-row" id="n-picker">
+      <button class="picker-btn" data-n="1">1</button>
+      <button class="picker-btn selected" data-n="2">2</button>
+      <button class="picker-btn" data-n="3">3</button>
+      <button class="picker-btn" data-n="4">4</button>
+      <button class="picker-btn" data-n="5">5</button>
+    </div>
+  </div>
+
+  <div class="picker">
+    <div class="picker-label">SESSION LENGTH</div>
+    <div class="picker-row" id="len-picker">
+      <button class="picker-btn" data-len="20">SHORT · 20</button>
+      <button class="picker-btn selected" data-len="30">MEDIUM · 30</button>
+      <button class="picker-btn" data-len="40">LONG · 40</button>
+    </div>
+  </div>
+
+  <button class="ov-btn" id="start-btn">▶ START</button>
+</div>
+
+<!-- RESULT OVERLAY -->
+<div class="overlay hidden" id="result-overlay">
+  <div class="ov-title" id="result-title">SESSION COMPLETE</div>
+  <div class="result-stats" id="result-stats"></div>
+  <button class="ov-btn" id="again-btn">▶ PLAY AGAIN</button>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+// LB safety shim — no-op if leaderboard.js failed to load
+if(typeof LB==='undefined') window.LB={submit:(_g,_s,_l,cb)=>{if(cb)cb();},show:()=>{},fetchEntries:()=>Promise.resolve({entries:[],online:false}),FB_ON:false};
+
+// ── STIMULI ──────────────────────────────────────────────────────────────
+const STIMULI = [
+  {e:'⚾',name:'baseball'},
+  {e:'✏️',name:'pencil'},
+  {e:'🍎',name:'apple'},
+  {e:'🎸',name:'guitar'},
+  {e:'☂️',name:'umbrella'},
+  {e:'🔑',name:'key'},
+  {e:'⚓',name:'anchor'},
+  {e:'🌵',name:'cactus'},
+  {e:'🔔',name:'bell'}
+];
+const MATCH_PROB = 0.3;
+const RESPONSE_WINDOW = 2500; // ms picture is shown / time allowed to respond
+const ISI = 500;              // ms blank gap between trials
+const FEEDBACK_HOLD = 300;    // ms feedback stays visible before blanking
+
+// ── STATE ────────────────────────────────────────────────────────────────
+let N = 2, TOTAL = 30;
+let sequence = [];
+let idx = 0;
+let responded = false;
+let trialStart = 0;
+let hits=0, misses=0, falseAlarms=0, correctRej=0, score=0, streak=0, bestStreak=0;
+let rtSum=0, rtCount=0;
+let running=false;
+let trialTimer=null, chainTimer=null;
+
+// ── SETUP PICKERS ────────────────────────────────────────────────────────
+document.querySelectorAll('#n-picker .picker-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#n-picker .picker-btn').forEach(b=>b.classList.remove('selected'));
+    btn.classList.add('selected');
+    N = parseInt(btn.dataset.n);
+  });
+});
+document.querySelectorAll('#len-picker .picker-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#len-picker .picker-btn').forEach(b=>b.classList.remove('selected'));
+    btn.classList.add('selected');
+    TOTAL = parseInt(btn.dataset.len);
+  });
+});
+
+// ── SEQUENCE GENERATION ──────────────────────────────────────────────────
+// Deliberately force ~30% target rate for good pacing. isMatch is always
+// derived from actual equality (seq[i] === seq[i-n]) — never assumed —
+// so ground truth is 100% consistent with what's rendered.
+function genSequence(n, total){
+  const seq = [];
+  for (let i = 0; i < total; i++) {
+    if (i >= n && Math.random() < MATCH_PROB) {
+      seq.push(seq[i - n]); // force a true target
+    } else {
+      let pick;
+      do {
+        pick = STIMULI[Math.floor(Math.random() * STIMULI.length)];
+      } while (i >= n && pick === seq[i - n]); // avoid accidental target
+      seq.push(pick);
+    }
+  }
+  return seq;
+}
+
+// ── GAME FLOW ────────────────────────────────────────────────────────────
+function startGame(){
+  document.getElementById('setup-overlay').classList.add('hidden');
+  document.getElementById('result-overlay').classList.add('hidden');
+
+  sequence = genSequence(N, TOTAL);
+  idx = 0; hits=0; misses=0; falseAlarms=0; correctRej=0; score=0; streak=0; bestStreak=0;
+  rtSum=0; rtCount=0; running=true;
+
+  document.getElementById('level-disp').textContent = N + '-BACK';
+  document.getElementById('n-word').textContent = N;
+  document.getElementById('score-disp').textContent = '0';
+  document.getElementById('streak-disp').textContent = '0';
+
+  clearTimeout(trialTimer); clearTimeout(chainTimer);
+  runTrial();
+}
+
+function runTrial(){
+  if (!running) return;
+  if (idx >= TOTAL) { endGame(); return; }
+
+  const isWarmup = idx < N;
+  responded = false;
+  trialStart = performance.now();
+
+  document.getElementById('trial-disp').textContent = (idx+1) + ' / ' + TOTAL;
+  document.getElementById('warmup-label').style.display = isWarmup ? 'block' : 'none';
+
+  const btn = document.getElementById('match-btn');
+  btn.disabled = isWarmup;
+
+  // Cross-fade in the stimulus
+  const el = document.getElementById('stim-emoji');
+  el.classList.add('flash');
+  setTimeout(() => {
+    el.textContent = sequence[idx].e;
+    el.classList.remove('flash');
+  }, 100);
+
+  // Reset + animate the per-trial timer bar
+  const bar = document.getElementById('trial-timer-bar');
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  bar.style.background = 'var(--cyan)';
+  // Force reflow so the transition re-triggers cleanly every trial
+  void bar.offsetWidth;
+  bar.style.transition = `width ${RESPONSE_WINDOW}ms linear`;
+  bar.style.width = '0%';
+
+  clearTimeout(trialTimer);
+  trialTimer = setTimeout(resolveTrial, RESPONSE_WINDOW);
+}
+
+function handleResponse(){
+  if (!running) return;
+  const isWarmup = idx < N;
+  if (isWarmup) return;      // no scoring possible yet — ignored
+  if (responded) return;     // one response per trial only
+
+  responded = true;
+  const rt = performance.now() - trialStart;
+  rtSum += rt; rtCount++;
+
+  const btn = document.getElementById('match-btn');
+  btn.classList.add('pressed-flash');
+  setTimeout(() => btn.classList.remove('pressed-flash'), 150);
+
+  clearTimeout(trialTimer);
+  resolveTrial();
+}
+
+function resolveTrial(){
+  if (!running) return;
+  clearTimeout(trialTimer);
+
+  const isWarmup = idx < N;
+  if (!isWarmup) {
+    const isMatch = sequence[idx] === sequence[idx - N];
+    let outcome;
+    if (isMatch && responded)      { outcome='hit';   hits++;        streak++; score += 100; }
+    else if (isMatch && !responded){ outcome='miss';  misses++;      streak=0; score = Math.max(0, score - 30); }
+    else if (!isMatch && responded){ outcome='false'; falseAlarms++; streak=0; score = Math.max(0, score - 50); }
+    else                            { outcome='correct'; correctRej++; streak++; score += 20; }
+    bestStreak = Math.max(bestStreak, streak);
+
+    document.getElementById('score-disp').textContent = score;
+    document.getElementById('streak-disp').textContent = streak;
+    flashFeedback(outcome);
+  }
+
+  idx++;
+  const btn = document.getElementById('match-btn');
+  btn.disabled = true;
+
+  clearTimeout(chainTimer);
+  chainTimer = setTimeout(() => {
+    document.getElementById('stim-emoji').textContent = '';
+    chainTimer = setTimeout(runTrial, ISI);
+  }, FEEDBACK_HOLD);
+}
+
+function flashFeedback(outcome){
+  const fb = document.getElementById('feedback');
+  if (outcome === 'hit') { fb.textContent = '✓ HIT +100'; fb.className = 'feedback show hit'; }
+  else if (outcome === 'miss') { fb.textContent = '✗ MISSED'; fb.className = 'feedback show bad'; }
+  else if (outcome === 'false') { fb.textContent = '✗ FALSE ALARM'; fb.className = 'feedback show bad'; }
+  else return; // correct rejection — stay silent, no visual noise
+  setTimeout(() => fb.classList.remove('show'), FEEDBACK_HOLD + 100);
+}
+
+function endGame(){
+  running = false;
+  clearTimeout(trialTimer); clearTimeout(chainTimer);
+
+  const totalScored = Math.max(0, TOTAL - N);
+  const accuracy = totalScored > 0 ? Math.round((hits + correctRej) / totalScored * 100) : 0;
+  const avgRT = rtCount > 0 ? Math.round(rtSum / rtCount) : 0;
+  const multiplier = 1 + (N - 1) * 0.25; // N1=1x, N2=1.25x, N3=1.5x, N4=1.75x, N5=2x
+  const lbScore = Math.max(0, Math.round(score * multiplier));
+
+  document.getElementById('result-stats').innerHTML =
+    `ACCURACY: <span class="hi">${accuracy}%<\/span><br>` +
+    `HITS: ${hits} &nbsp; MISSES: <span class="lo">${misses}<\/span><br>` +
+    `FALSE ALARMS: <span class="lo">${falseAlarms}<\/span> &nbsp; CORRECT: ${correctRej}<br>` +
+    `AVG REACTION: ${avgRT}ms<br>` +
+    `BEST STREAK: ${bestStreak}<br><br>` +
+    `FINAL SCORE: <span class="hi">${lbScore}<\/span>`;
+
+  const label = `N=${N} &nbsp;·&nbsp; ACCURACY ${accuracy}% &nbsp;·&nbsp; SCORE ${lbScore}`;
+  LB.submit('nback', lbScore, label, () => {
+    document.getElementById('result-title').textContent = 'SESSION COMPLETE';
+    document.getElementById('result-overlay').classList.remove('hidden');
+  });
+}
+
+// ── INPUT ────────────────────────────────────────────────────────────────
+document.getElementById('match-btn').addEventListener('click', handleResponse);
+document.addEventListener('keydown', e => {
+  if (!running) return;
+  if (e.code === 'Space' || e.key === 'm' || e.key === 'M') {
+    e.preventDefault();
+    handleResponse();
+  }
+});
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('again-btn').addEventListener('click', () => {
+  document.getElementById('result-overlay').classList.add('hidden');
+  document.getElementById('setup-overlay').classList.remove('hidden');
+});
+</script>
+</body>
+</html>
