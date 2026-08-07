@@ -1008,6 +1008,40 @@ function updateHUD() {
 let drag = null;
 let pendingDrag = null; // waiting to see if mouse moves enough
 
+// Self-heals a drag that never received its terminating event (mouseup/
+// touchend/touchcancel). This can genuinely happen: the OS steals the touch
+// for a system gesture, a notification interrupts mid-drag, the browser tab
+// loses focus, or rare touch-event ordering on some devices. Without this,
+// the ghost card stays permanently frozen on screen (visually overlapping
+// whatever's really there) and the underlying dragged card can stay hidden.
+function forceDragCleanup() {
+  clearPendingDrag();
+  if (!drag) return;
+  // Restore visibility on whichever cards the orphaned drag hid — targeted,
+  // not a full render(), so it can't disturb a different interaction that
+  // may be starting in the same event.
+  drag.cards.forEach(card => {
+    const el = document.querySelector(`[data-card-id="${card.id}"]`);
+    if (el) el.style.visibility = '';
+  });
+  if (drag.ghost) drag.ghost.style.display = 'none';
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup',   onDragEnd);
+  document.removeEventListener('touchmove', onDragMove);
+  document.removeEventListener('touchend',  onDragEnd);
+  document.removeEventListener('touchcancel', onDragCancel);
+  drag = null;
+  document.body.classList.remove('is-dragging');
+}
+
+// Safety nets — catch the interruption itself when possible...
+window.addEventListener('blur', forceDragCleanup);
+document.addEventListener('visibilitychange', () => { if (document.hidden) forceDragCleanup(); });
+// ...and as a guaranteed fallback, self-heal on the very next touch/click
+// anywhere, even if blur/visibilitychange never fired for some reason.
+document.addEventListener('mousedown', () => { if (drag) forceDragCleanup(); }, true);
+document.addEventListener('touchstart', () => { if (drag) forceDragCleanup(); }, {capture:true, passive:true});
+
 function startDrag(e, cards, fromType, fromIdx, fromCardIdx) {
   const point = e.touches ? e.touches[0] : e;
   // Store pending drag info — don't start until mouse moves 5px
